@@ -32,20 +32,29 @@ class Task {
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
-      category: json['category'] as String,
-      priority: json['priority'] as String,
-      status: json['status'] as String,
+      category: json['category'] as String? ?? 'general',
+      priority: json['priority'] as String? ?? 'low',
+      status: json['status'] as String? ?? 'pending',
       assignedTo: json['assigned_to'] as String?,
       dueDate: json['due_date'] != null
           ? DateTime.parse(json['due_date'] as String)
           : null,
-      extractedEntities: json['extracted_entities'] as Map<String, dynamic>?,
+      extractedEntities: json['extracted_entities'] != null
+          ? Map<String, dynamic>.from(json['extracted_entities'] as Map)
+          : null,
       suggestedActions: json['suggested_actions'] != null
-          ? List<String>.from(json['suggested_actions'] as List)
+          ? _parseSuggestedActions(json['suggested_actions'])
           : null,
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
+  }
+
+  static List<String> _parseSuggestedActions(dynamic actions) {
+    if (actions is List) {
+      return actions.map((e) => e.toString()).toList();
+    }
+    return [];
   }
 
   Map<String, dynamic> toJson() {
@@ -94,6 +103,11 @@ class Task {
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  @override
+  String toString() {
+    return 'Task(id: $id, title: $title, category: $category, priority: $priority, status: $status)';
+  }
 }
 
 class Classification {
@@ -113,8 +127,48 @@ class Classification {
     return Classification(
       category: json['category'] as String,
       priority: json['priority'] as String,
-      extractedEntities: json['extracted_entities'] as Map<String, dynamic>,
-      suggestedActions: List<String>.from(json['suggested_actions'] as List),
+      extractedEntities: Map<String, dynamic>.from(
+        json['extracted_entities'] as Map? ?? {},
+      ),
+      suggestedActions: json['suggested_actions'] != null
+          ? List<String>.from(json['suggested_actions'] as List)
+          : [],
+    );
+  }
+}
+
+class TaskHistory {
+  final String id;
+  final String taskId;
+  final String action;
+  final Map<String, dynamic>? oldValue;
+  final Map<String, dynamic>? newValue;
+  final String? changedBy;
+  final DateTime changedAt;
+
+  TaskHistory({
+    required this.id,
+    required this.taskId,
+    required this.action,
+    this.oldValue,
+    this.newValue,
+    this.changedBy,
+    required this.changedAt,
+  });
+
+  factory TaskHistory.fromJson(Map<String, dynamic> json) {
+    return TaskHistory(
+      id: json['id'] as String,
+      taskId: json['task_id'] as String,
+      action: json['action'] as String,
+      oldValue: json['old_value'] != null
+          ? Map<String, dynamic>.from(json['old_value'] as Map)
+          : null,
+      newValue: json['new_value'] != null
+          ? Map<String, dynamic>.from(json['new_value'] as Map)
+          : null,
+      changedBy: json['changed_by'] as String?,
+      changedAt: DateTime.parse(json['changed_at'] as String),
     );
   }
 }
