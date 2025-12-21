@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
 
 class SummaryCards extends ConsumerWidget {
@@ -10,14 +11,14 @@ class SummaryCards extends ConsumerWidget {
     final counts = ref.watch(taskCountsProvider);
 
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
       child: Row(
         children: [
           Expanded(
             child: _SummaryCard(
               title: 'Pending',
               count: counts['pending'] ?? 0,
-              color: Colors.orange,
+              color: AppTheme.warningColor,
               icon: Icons.pending_actions,
             ),
           ),
@@ -26,7 +27,7 @@ class SummaryCards extends ConsumerWidget {
             child: _SummaryCard(
               title: 'In Progress',
               count: counts['in_progress'] ?? 0,
-              color: Colors.blue,
+              color: AppTheme.infoColor,
               icon: Icons.sync,
             ),
           ),
@@ -35,7 +36,7 @@ class SummaryCards extends ConsumerWidget {
             child: _SummaryCard(
               title: 'Completed',
               count: counts['completed'] ?? 0,
-              color: Colors.green,
+              color: AppTheme.successColor,
               icon: Icons.check_circle,
             ),
           ),
@@ -60,35 +61,49 @@ class _SummaryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Card(
-      elevation: 2,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [color.withOpacity(0.1), color.withOpacity(0.05)],
+            colors: [
+              color.withOpacity(isDark ? 0.15 : 0.08),
+              color.withOpacity(isDark ? 0.08 : 0.03),
+            ],
           ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.15),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: color, size: 24),
+            ),
+            const SizedBox(height: 12),
             Text(
               count.toString(),
               style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+                fontWeight: FontWeight.w700,
                 color: color,
+                height: 1,
               ),
             ),
+            const SizedBox(height: 4),
             Text(
               title,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: Colors.grey.shade600),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.3,
+              ),
             ),
           ],
         ),

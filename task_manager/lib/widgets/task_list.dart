@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
 import '../models/task.dart';
 
@@ -32,26 +33,26 @@ class TaskCard extends ConsumerWidget {
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'scheduling':
-        return Colors.blue;
+        return const Color(0xFF3B82F6); // Blue
       case 'finance':
-        return Colors.green;
+        return AppTheme.successColor;
       case 'technical':
-        return Colors.purple;
+        return AppTheme.secondaryColor;
       case 'safety':
-        return Colors.red;
+        return AppTheme.errorColor;
       default:
-        return Colors.grey;
+        return const Color(0xFF64748B); // Slate
     }
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
       case 'high':
-        return Colors.red;
+        return AppTheme.errorColor;
       case 'medium':
-        return Colors.orange;
+        return AppTheme.warningColor;
       default:
-        return Colors.blue;
+        return AppTheme.infoColor;
     }
   }
 
@@ -66,16 +67,29 @@ class TaskCard extends ConsumerWidget {
     }
   }
 
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'completed':
+        return AppTheme.successColor;
+      case 'in_progress':
+        return AppTheme.infoColor;
+      default:
+        return AppTheme.warningColor;
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = _getCategoryColor(task.category);
     final priorityColor = _getPriorityColor(task.priority);
+    final statusColor = _getStatusColor(task.status);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -90,16 +104,20 @@ class TaskCard extends ConsumerWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: categoryColor.withOpacity(0.1),
+                      color: categoryColor.withOpacity(0.12),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: categoryColor.withOpacity(0.3)),
+                      border: Border.all(
+                        color: categoryColor.withOpacity(0.3),
+                        width: 1,
+                      ),
                     ),
                     child: Text(
                       task.category.toUpperCase(),
                       style: TextStyle(
                         color: categoryColor,
                         fontSize: 11,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
                       ),
                     ),
                   ),
@@ -107,12 +125,12 @@ class TaskCard extends ConsumerWidget {
                   // Priority Badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
+                      horizontal: 10,
+                      vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: priorityColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      color: priorityColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -124,7 +142,8 @@ class TaskCard extends ConsumerWidget {
                           style: TextStyle(
                             color: priorityColor,
                             fontSize: 10,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ],
@@ -132,23 +151,45 @@ class TaskCard extends ConsumerWidget {
                   ),
                   const Spacer(),
                   // Status Indicator
-                  Icon(
-                    _getStatusIcon(task.status),
-                    color: task.status == 'completed'
-                        ? Colors.green
-                        : Colors.grey,
-                    size: 20,
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: statusColor.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getStatusIcon(task.status),
+                      color: statusColor,
+                      size: 18,
+                    ),
                   ),
+                  const SizedBox(width: 4),
                   // More Menu
                   PopupMenuButton<String>(
+                    icon: Icon(
+                      Icons.more_vert,
+                      size: 20,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                     onSelected: (value) async {
                       if (value == 'delete') {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Text('Delete Task'),
+                            title: const Row(
+                              children: [
+                                Icon(Icons.delete, color: AppTheme.errorColor),
+                                SizedBox(width: 12),
+                                Text('Delete Task'),
+                              ],
+                            ),
                             content: const Text(
-                              'Are you sure you want to delete this task?',
+                              'Are you sure you want to delete this task? This action cannot be undone.',
                             ),
                             actions: [
                               TextButton(
@@ -158,7 +199,7 @@ class TaskCard extends ConsumerWidget {
                               ElevatedButton(
                                 onPressed: () => Navigator.pop(context, true),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
+                                  backgroundColor: AppTheme.errorColor,
                                 ),
                                 child: const Text('Delete'),
                               ),
@@ -171,8 +212,19 @@ class TaskCard extends ConsumerWidget {
                               .deleteTask(task.id);
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task deleted successfully'),
+                              SnackBar(
+                                content: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.check_circle,
+                                      color: Colors.white,
+                                    ),
+                                    SizedBox(width: 12),
+                                    Text('Task deleted successfully'),
+                                  ],
+                                ),
+                                backgroundColor: AppTheme.successColor,
+                                behavior: SnackBarBehavior.floating,
                               ),
                             );
                           }
@@ -192,8 +244,12 @@ class TaskCard extends ConsumerWidget {
                         value: 'in_progress',
                         child: Row(
                           children: [
-                            Icon(Icons.sync, size: 18),
-                            SizedBox(width: 8),
+                            Icon(
+                              Icons.sync,
+                              size: 18,
+                              color: AppTheme.infoColor,
+                            ),
+                            SizedBox(width: 12),
                             Text('Mark In Progress'),
                           ],
                         ),
@@ -202,8 +258,12 @@ class TaskCard extends ConsumerWidget {
                         value: 'complete',
                         child: Row(
                           children: [
-                            Icon(Icons.check_circle, size: 18),
-                            SizedBox(width: 8),
+                            Icon(
+                              Icons.check_circle,
+                              size: 18,
+                              color: AppTheme.successColor,
+                            ),
+                            SizedBox(width: 12),
                             Text('Mark Complete'),
                           ],
                         ),
@@ -212,9 +272,16 @@ class TaskCard extends ConsumerWidget {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete, size: 18, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('Delete', style: TextStyle(color: Colors.red)),
+                            Icon(
+                              Icons.delete,
+                              size: 18,
+                              color: AppTheme.errorColor,
+                            ),
+                            SizedBox(width: 12),
+                            Text(
+                              'Delete',
+                              style: TextStyle(color: AppTheme.errorColor),
+                            ),
                           ],
                         ),
                       ),
@@ -222,59 +289,111 @@ class TaskCard extends ConsumerWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               // Title
               Text(
                 task.title,
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+                  fontWeight: FontWeight.w600,
                   decoration: task.status == 'completed'
                       ? TextDecoration.lineThrough
                       : null,
+                  decorationThickness: 2,
+                  height: 1.4,
                 ),
               ),
               if (task.description != null && task.description!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
                   task.description!,
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(color: Colors.grey.shade600),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDark
+                        ? AppTheme.darkTextSecondary
+                        : AppTheme.lightTextSecondary,
+                    height: 1.5,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               // Footer Info
-              Row(
+              Wrap(
+                spacing: 16,
+                runSpacing: 8,
                 children: [
-                  if (task.dueDate != null) ...[
-                    Icon(
-                      Icons.calendar_today,
-                      size: 14,
-                      color: Colors.grey.shade600,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      DateFormat('MMM dd, yyyy').format(task.dueDate!),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                  if (task.dueDate != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkSurface
+                            : AppTheme.lightBackground,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? AppTheme.darkBorder
+                              : AppTheme.lightBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.calendar_today,
+                            size: 14,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                  ],
-                  if (task.assignedTo != null) ...[
-                    Icon(Icons.person, size: 14, color: Colors.grey.shade600),
-                    const SizedBox(width: 4),
-                    Text(
-                      task.assignedTo!,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey.shade600,
+                  if (task.assignedTo != null)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppTheme.darkSurface
+                            : AppTheme.lightBackground,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isDark
+                              ? AppTheme.darkBorder
+                              : AppTheme.lightBorder,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.person,
+                            size: 14,
+                            color: isDark
+                                ? AppTheme.darkTextSecondary
+                                : AppTheme.lightTextSecondary,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            task.assignedTo!,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(fontWeight: FontWeight.w600),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
                 ],
               ),
             ],

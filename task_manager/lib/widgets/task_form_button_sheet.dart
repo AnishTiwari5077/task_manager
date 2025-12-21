@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
 import '../models/task.dart';
 
@@ -60,6 +61,9 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       initialDate: _dueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
+      builder: (context, child) {
+        return Theme(data: Theme.of(context), child: child!);
+      },
     );
     if (picked != null) {
       setState(() => _dueDate = picked);
@@ -101,7 +105,17 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         await ref.read(taskNotifierProvider.notifier).createTask(taskData);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task created successfully')),
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Task created successfully'),
+                ],
+              ),
+              backgroundColor: AppTheme.successColor,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
           Navigator.pop(context);
         }
@@ -112,7 +126,17 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             .updateTask(widget.task!.id, taskData);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Task updated successfully')),
+            SnackBar(
+              content: const Row(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text('Task updated successfully'),
+                ],
+              ),
+              backgroundColor: AppTheme.successColor,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
           Navigator.pop(context);
         }
@@ -121,8 +145,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            content: Row(
+              children: [
+                const Icon(Icons.error, color: Colors.white),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Error: ${e.toString()}')),
+              ],
+            ),
+            backgroundColor: AppTheme.errorColor,
+            behavior: SnackBarBehavior.floating,
           ),
         );
       }
@@ -132,11 +163,12 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final taskNotifier = ref.watch(taskNotifierProvider);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
@@ -152,33 +184,57 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary.withOpacity(0.3)
+                      : AppTheme.lightTextSecondary.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
               // Header
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 child: Row(
                   children: [
-                    Text(
-                      widget.task == null ? 'Create Task' : 'Edit Task',
-                      style: Theme.of(context).textTheme.headlineSmall,
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        widget.task == null ? Icons.add_task : Icons.edit,
+                        color: AppTheme.primaryColor,
+                        size: 24,
+                      ),
                     ),
-                    const Spacer(),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        widget.task == null ? 'Create Task' : 'Edit Task',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                    ),
                     IconButton(
                       icon: const Icon(Icons.close),
                       onPressed: () => Navigator.pop(context),
+                      style: IconButton.styleFrom(
+                        backgroundColor: isDark
+                            ? AppTheme.darkSurface
+                            : AppTheme.lightBackground,
+                      ),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              Divider(
+                height: 1,
+                color: isDark ? AppTheme.darkDivider : AppTheme.lightDivider,
+              ),
               // Form
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -188,8 +244,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         TextFormField(
                           controller: _titleController,
                           decoration: const InputDecoration(
-                            labelText: 'Title *',
-                            border: OutlineInputBorder(),
+                            labelText: 'Title',
+                            hintText: 'Enter task title',
                             prefixIcon: Icon(Icons.title),
                           ),
                           validator: (value) {
@@ -203,13 +259,13 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           },
                           maxLength: 200,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         // Description
                         TextFormField(
                           controller: _descriptionController,
                           decoration: const InputDecoration(
-                            labelText: 'Description *',
-                            border: OutlineInputBorder(),
+                            labelText: 'Description',
+                            hintText: 'Enter task description',
                             prefixIcon: Icon(Icons.description),
                             alignLabelWithHint: true,
                           ),
@@ -221,85 +277,158 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         // Due Date
                         InkWell(
                           onTap: _selectDate,
+                          borderRadius: BorderRadius.circular(12),
                           child: InputDecorator(
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Due Date',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.calendar_today),
+                              hintText: 'Select date',
+                              prefixIcon: const Icon(Icons.calendar_today),
+                              suffixIcon: _dueDate != null
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear, size: 20),
+                                      onPressed: () {
+                                        setState(() => _dueDate = null);
+                                      },
+                                    )
+                                  : null,
                             ),
                             child: Text(
                               _dueDate == null
-                                  ? 'Select date'
+                                  ? 'No date selected'
                                   : DateFormat(
-                                      'MMM dd, yyyy',
+                                      'EEEE, MMM dd, yyyy',
                                     ).format(_dueDate!),
+                              style: TextStyle(
+                                color: _dueDate == null
+                                    ? (isDark
+                                          ? AppTheme.darkTextSecondary
+                                          : AppTheme.lightTextSecondary)
+                                    : null,
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 20),
                         // Assigned To
                         TextFormField(
                           controller: _assignedToController,
                           decoration: const InputDecoration(
                             labelText: 'Assigned To',
-                            border: OutlineInputBorder(),
+                            hintText: 'Enter assignee name',
                             prefixIcon: Icon(Icons.person),
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        const SizedBox(height: 28),
                         // Classification Preview
                         if (_showClassification && _classification != null) ...[
-                          const Text(
-                            'Auto-Classification',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Card(
-                            color: Colors.blue.shade50,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.category, size: 20),
-                                      const SizedBox(width: 8),
-                                      const Text('Category: '),
-                                      Text(
-                                        _classification!['category'],
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 8),
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.flag, size: 20),
-                                      const SizedBox(width: 8),
-                                      const Text('Priority: '),
-                                      Text(
-                                        _classification!['priority'],
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.infoColor.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Icon(
+                                  Icons.auto_awesome,
+                                  size: 20,
+                                  color: AppTheme.infoColor,
+                                ),
                               ),
-                            ),
+                              const SizedBox(width: 12),
+                              Text(
+                                'Auto-Classification',
+                                style: Theme.of(context).textTheme.titleMedium,
+                              ),
+                            ],
                           ),
                           const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: AppTheme.infoColor.withOpacity(0.05),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: AppTheme.infoColor.withOpacity(0.2),
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.category,
+                                      size: 20,
+                                      color: AppTheme.infoColor,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Category: ',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        _classification!['category'],
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: AppTheme.infoColor,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Icon(
+                                      Icons.flag,
+                                      size: 20,
+                                      color: AppTheme.infoColor,
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Priority: ',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodyMedium,
+                                    ),
+                                    Expanded(
+                                      child: Text(
+                                        _classification!['priority'],
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.w700,
+                                              color: AppTheme.infoColor,
+                                            ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Text(
+                            'Override Classification',
+                            style: Theme.of(context).textTheme.titleSmall
+                                ?.copyWith(
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                          ),
+                          const SizedBox(height: 12),
                           // Override options
                           Row(
                             children: [
@@ -307,8 +436,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                                 child: DropdownButtonFormField<String>(
                                   value: _category,
                                   decoration: const InputDecoration(
-                                    labelText: 'Override Category',
-                                    border: OutlineInputBorder(),
+                                    labelText: 'Category',
+                                    prefixIcon: Icon(Icons.category, size: 20),
                                   ),
                                   items: const [
                                     DropdownMenuItem(
@@ -342,8 +471,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                                 child: DropdownButtonFormField<String>(
                                   value: _priority,
                                   decoration: const InputDecoration(
-                                    labelText: 'Override Priority',
-                                    border: OutlineInputBorder(),
+                                    labelText: 'Priority',
+                                    prefixIcon: Icon(Icons.flag, size: 20),
                                   ),
                                   items: const [
                                     DropdownMenuItem(
@@ -366,7 +495,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
                         ],
                         // Status (only for edit)
                         if (widget.task != null) ...[
@@ -374,7 +503,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             value: _status,
                             decoration: const InputDecoration(
                               labelText: 'Status',
-                              border: OutlineInputBorder(),
                               prefixIcon: Icon(Icons.sync_alt),
                             ),
                             items: const [
@@ -397,28 +525,41 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               }
                             },
                           ),
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 28),
                         ],
                         // Submit Button
                         SizedBox(
                           width: double.infinity,
-                          height: 50,
+                          height: 54,
                           child: ElevatedButton(
                             onPressed: taskNotifier.isLoading
                                 ? null
                                 : _submitForm,
                             child: taskNotifier.isLoading
                                 ? const SizedBox(
-                                    height: 20,
-                                    width: 20,
+                                    height: 22,
+                                    width: 22,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
+                                      strokeWidth: 2.5,
+                                      color: Colors.white,
                                     ),
                                   )
-                                : Text(
-                                    _showClassification
-                                        ? 'Create Task'
-                                        : 'Continue',
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        _showClassification
+                                            ? Icons.check
+                                            : Icons.arrow_forward,
+                                        size: 20,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        _showClassification
+                                            ? 'Create Task'
+                                            : 'Continue',
+                                      ),
+                                    ],
                                   ),
                           ),
                         ),
