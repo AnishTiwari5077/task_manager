@@ -185,8 +185,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                 height: 4,
                 decoration: BoxDecoration(
                   color: isDark
-                      ? AppTheme.darkTextSecondary.withOpacity(0.3)
-                      : AppTheme.lightTextSecondary.withOpacity(0.3),
+                      ? AppTheme.darkTextSecondary.withValues(alpha: .3)
+                      : AppTheme.lightTextSecondary.withValues(alpha: .3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -198,7 +198,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryColor.withOpacity(0.1),
+                        color: AppTheme.primaryColor.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(
@@ -330,7 +330,9 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               Container(
                                 padding: const EdgeInsets.all(8),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.infoColor.withOpacity(0.1),
+                                  color: AppTheme.infoColor.withValues(
+                                    alpha: .1,
+                                  ),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Icon(
@@ -350,10 +352,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           Container(
                             padding: const EdgeInsets.all(20),
                             decoration: BoxDecoration(
-                              color: AppTheme.infoColor.withOpacity(0.05),
+                              color: AppTheme.infoColor.withValues(alpha: .05),
                               borderRadius: BorderRadius.circular(16),
                               border: Border.all(
-                                color: AppTheme.infoColor.withOpacity(0.2),
+                                color: AppTheme.infoColor.withValues(alpha: .2),
                               ),
                             ),
                             child: Column(
@@ -434,7 +436,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             children: [
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _category,
+                                  initialValue: _category,
                                   decoration: const InputDecoration(
                                     labelText: 'Category',
                                     prefixIcon: Icon(Icons.category, size: 20),
@@ -469,7 +471,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               const SizedBox(width: 12),
                               Expanded(
                                 child: DropdownButtonFormField<String>(
-                                  value: _priority,
+                                  initialValue: _priority,
                                   decoration: const InputDecoration(
                                     labelText: 'Priority',
                                     prefixIcon: Icon(Icons.flag, size: 20),
@@ -500,7 +502,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         // Status (only for edit)
                         if (widget.task != null) ...[
                           DropdownButtonFormField<String>(
-                            value: _status,
+                            initialValue: _status,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               prefixIcon: Icon(Icons.sync_alt),

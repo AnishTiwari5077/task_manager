@@ -104,10 +104,10 @@ class TaskCard extends ConsumerWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: categoryColor.withOpacity(0.12),
+                      color: categoryColor.withValues(alpha: .12),
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(
-                        color: categoryColor.withOpacity(0.3),
+                        color: categoryColor.withValues(alpha: .3),
                         width: 1,
                       ),
                     ),
@@ -129,7 +129,7 @@ class TaskCard extends ConsumerWidget {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: priorityColor.withOpacity(0.12),
+                      color: priorityColor.withValues(alpha: .12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Row(
@@ -154,7 +154,7 @@ class TaskCard extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.12),
+                      color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(

@@ -206,7 +206,7 @@ class FilterDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusFilter = ref.watch(statusFilterProvider);
-    final categoryFilter = ref.watch(categoryFilterProvider);
+    final _ = ref.watch(categoryFilterProvider);
     final priorityFilter = ref.watch(priorityFilterProvider);
 
     return AlertDialog(
