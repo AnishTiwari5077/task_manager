@@ -127,26 +127,28 @@ class _TaskDashboardScreenState extends ConsumerState<TaskDashboardScreen> {
                 data: (tasks) {
                   if (tasks.isEmpty) {
                     return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.task_alt,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No tasks found',
-                            style: Theme.of(context).textTheme.titleLarge
-                                ?.copyWith(color: Colors.grey.shade600),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Create your first task to get started',
-                            style: TextStyle(color: Colors.grey.shade600),
-                          ),
-                        ],
+                      child: SingleChildScrollView(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.task_alt,
+                              size: 64,
+                              color: Colors.grey.shade400,
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'No tasks found',
+                              style: Theme.of(context).textTheme.titleLarge
+                                  ?.copyWith(color: Colors.grey.shade600),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'Create your first task to get started',
+                              style: TextStyle(color: Colors.grey.shade600),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   }
