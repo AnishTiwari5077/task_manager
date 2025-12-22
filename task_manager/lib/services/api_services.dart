@@ -4,11 +4,7 @@ import '../models/task.dart';
 class ApiService {
   late final Dio _dio;
 
-  // Replace with your actual backend URL
-  // For local testing: http://10.0.2.2:3000 (Android Emulator)
-  // For local testing: http://localhost:3000 (iOS Simulator)
-  // For production: https://your-app.onrender.com
-  // static const String baseUrl = 'http://localhost:3000'; // Change this!
+  //static const String baseUrl = 'https://task-manager1-owu7.onrender.com';
   static const String baseUrl = 'http://10.0.2.2:3000';
 
   ApiService() {
@@ -51,14 +47,24 @@ class ApiService {
     );
   }
 
-  // Create a new task
+  // Create a new task with classification data
   Future<Map<String, dynamic>> createTask(Map<String, dynamic> taskData) async {
     try {
-      print('Creating task with data: $taskData');
-      final response = await _dio.post('/api/tasks', data: taskData);
+      // Prepare task data with proper formatting
+      final formattedData = _formatTaskData(taskData);
+
+      print('Creating task with data: $formattedData');
+      final response = await _dio.post('/api/tasks', data: formattedData);
 
       if (response.data is Map<String, dynamic>) {
-        return response.data as Map<String, dynamic>;
+        final responseData = response.data as Map<String, dynamic>;
+
+        // Handle both direct data and wrapped success response
+        if (responseData.containsKey('success') &&
+            responseData['data'] != null) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+        return responseData;
       }
       throw Exception('Invalid response format');
     } on DioException catch (e) {
@@ -140,8 +146,11 @@ class ApiService {
   // Update a task
   Future<Task> updateTask(String id, Map<String, dynamic> updates) async {
     try {
-      print('Updating task $id with: $updates');
-      final response = await _dio.patch('/api/tasks/$id', data: updates);
+      // Format the update data
+      final formattedData = _formatTaskData(updates);
+
+      print('Updating task $id with: $formattedData');
+      final response = await _dio.patch('/api/tasks/$id', data: formattedData);
 
       if (response.data is Map<String, dynamic>) {
         final responseData = response.data as Map<String, dynamic>;
@@ -166,6 +175,52 @@ class ApiService {
     }
   }
 
+  // Classify task content (client-side, but can be moved to backend)
+  Future<Map<String, dynamic>> classifyTask({
+    required String title,
+    String? description,
+  }) async {
+    // This could be an API endpoint in the future
+    // For now, it's handled client-side by TaskClassificationService
+    // But keeping this method for potential future API integration
+
+    try {
+      // If you implement server-side classification, use this:
+      // final response = await _dio.post('/api/tasks/classify', data: {
+      //   'title': title,
+      //   'description': description,
+      // });
+      // return response.data;
+
+      throw UnimplementedError(
+        'Classification is handled client-side. Use TaskClassificationService instead.',
+      );
+    } on DioException catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // Get task statistics
+  Future<Map<String, dynamic>> getTaskStatistics() async {
+    try {
+      final response = await _dio.get('/api/tasks/statistics');
+
+      if (response.data is Map<String, dynamic>) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData['success'] == true && responseData['data'] is Map) {
+          return responseData['data'] as Map<String, dynamic>;
+        }
+      }
+
+      throw Exception('Invalid response format');
+    } on DioException catch (e) {
+      // If endpoint doesn't exist, return empty stats
+      print('Statistics endpoint not available: $e');
+      return {};
+    }
+  }
+
   // Check API health
   Future<bool> checkHealth() async {
     try {
@@ -175,6 +230,35 @@ class ApiService {
       print('Health check failed: $e');
       return false;
     }
+  }
+
+  // Format task data for API consumption
+  Map<String, dynamic> _formatTaskData(Map<String, dynamic> taskData) {
+    final formatted = Map<String, dynamic>.from(taskData);
+
+    // Ensure classification data is properly formatted
+    if (formatted.containsKey('extracted_entities')) {
+      final entities = formatted['extracted_entities'];
+      if (entities is Map) {
+        // Convert to JSON-serializable format
+        formatted['extracted_entities'] = Map<String, dynamic>.from(entities);
+      }
+    }
+
+    if (formatted.containsKey('suggested_actions')) {
+      final actions = formatted['suggested_actions'];
+      if (actions is List) {
+        // Ensure it's a list of strings
+        formatted['suggested_actions'] = List<String>.from(
+          actions.map((a) => a.toString()),
+        );
+      }
+    }
+
+    // Remove null values to keep payload clean
+    formatted.removeWhere((key, value) => value == null);
+
+    return formatted;
   }
 
   String _handleError(DioException error) {

@@ -25,8 +25,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   String? _priority;
   String _status = 'pending';
   DateTime? _dueDate;
-  bool _showClassification = false;
-  Map<String, dynamic>? _classification;
+  Map<String, dynamic>? _autoClassification;
+  bool _showAutoClassification = false;
 
   @override
   void initState() {
@@ -45,14 +45,199 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       _status = widget.task!.status;
       _dueDate = widget.task!.dueDate;
     }
+
+    // Add listeners for auto-classification
+    _titleController.addListener(_onTextChanged);
+    _descriptionController.addListener(_onTextChanged);
   }
 
   @override
   void dispose() {
+    _titleController.removeListener(_onTextChanged);
+    _descriptionController.removeListener(_onTextChanged);
     _titleController.dispose();
     _descriptionController.dispose();
     _assignedToController.dispose();
     super.dispose();
+  }
+
+  void _onTextChanged() {
+    // Trigger auto-classification when text changes
+    if (_titleController.text.trim().length >= 3) {
+      _performAutoClassification();
+    }
+  }
+
+  void _performAutoClassification() {
+    final classification = ref
+        .read(classificationNotifierProvider.notifier)
+        .classifyTask(
+          title: _titleController.text.trim(),
+          description: _descriptionController.text.trim(),
+        );
+
+    setState(() {
+      _autoClassification = classification;
+      _showAutoClassification = true;
+
+      // ✅ Auto-populate category and priority
+      _category = classification['category'] as String?;
+      _priority = classification['priority'] as String?;
+
+      // ✅ NEW: Auto-populate date from extracted entities
+      final entities =
+          classification['extracted_entities'] as Map<String, dynamic>?;
+      if (entities != null && _dueDate == null) {
+        final dates = entities['dates'] as List?;
+        if (dates != null && dates.isNotEmpty) {
+          _dueDate = _parseDateFromText(dates.first.toString());
+        }
+      }
+
+      // ✅ NEW: Auto-populate assignee from extracted entities
+      if (entities != null && _assignedToController.text.isEmpty) {
+        final people = entities['people'] as List?;
+        if (people != null && people.isNotEmpty) {
+          _assignedToController.text = people.first.toString();
+        }
+      }
+    });
+  }
+
+  // ✅ Parse date strings like "today", "tomorrow", "dec 12", etc.
+  DateTime? _parseDateFromText(String dateText) {
+    final now = DateTime.now();
+    final text = dateText.toLowerCase().trim();
+
+    // Relative dates
+    if (text == 'today') {
+      return now;
+    } else if (text == 'tomorrow') {
+      return now.add(const Duration(days: 1));
+    } else if (text == 'yesterday') {
+      return now.subtract(const Duration(days: 1));
+    }
+
+    // Weekdays
+    if (text == 'monday') return _getNextWeekday(DateTime.monday);
+    if (text == 'tuesday') return _getNextWeekday(DateTime.tuesday);
+    if (text == 'wednesday') return _getNextWeekday(DateTime.wednesday);
+    if (text == 'thursday') return _getNextWeekday(DateTime.thursday);
+    if (text == 'friday') return _getNextWeekday(DateTime.friday);
+    if (text == 'saturday') return _getNextWeekday(DateTime.saturday);
+    if (text == 'sunday') return _getNextWeekday(DateTime.sunday);
+
+    // Relative periods
+    if (text.contains('next week')) {
+      return now.add(const Duration(days: 7));
+    }
+    if (text.contains('this week')) {
+      return now.add(const Duration(days: 3));
+    }
+    if (text.contains('next month')) {
+      return DateTime(now.year, now.month + 1, now.day);
+    }
+
+    // ✅ NEW: Month + Day parsing (e.g., "dec 12", "december 25")
+    final monthDayPattern = RegExp(
+      r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
+      caseSensitive: false,
+    );
+    final monthDayMatch = monthDayPattern.firstMatch(text);
+    if (monthDayMatch != null) {
+      final monthStr = monthDayMatch.group(1)!.toLowerCase();
+      final day = int.parse(monthDayMatch.group(2)!);
+
+      final monthMap = {
+        'jan': 1,
+        'feb': 2,
+        'mar': 3,
+        'apr': 4,
+        'may': 5,
+        'jun': 6,
+        'jul': 7,
+        'aug': 8,
+        'sep': 9,
+        'oct': 10,
+        'nov': 11,
+        'dec': 12,
+      };
+
+      final month = monthMap[monthStr.substring(0, 3)];
+      if (month != null) {
+        // Use current year or next year if date has passed
+        var year = now.year;
+        final possibleDate = DateTime(year, month, day);
+        if (possibleDate.isBefore(now)) {
+          year++; // Use next year if date already passed
+        }
+        return DateTime(year, month, day);
+      }
+    }
+
+    // ✅ Month + Day + Year (e.g., "dec 12 2025")
+    final fullDatePattern = RegExp(
+      r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})[,\s]+(\d{4})',
+      caseSensitive: false,
+    );
+    final fullMatch = fullDatePattern.firstMatch(text);
+    if (fullMatch != null) {
+      final monthStr = fullMatch.group(1)!.toLowerCase();
+      final day = int.parse(fullMatch.group(2)!);
+      final year = int.parse(fullMatch.group(3)!);
+
+      final monthMap = {
+        'jan': 1,
+        'feb': 2,
+        'mar': 3,
+        'apr': 4,
+        'may': 5,
+        'jun': 6,
+        'jul': 7,
+        'aug': 8,
+        'sep': 9,
+        'oct': 10,
+        'nov': 11,
+        'dec': 12,
+      };
+
+      final month = monthMap[monthStr.substring(0, 3)];
+      if (month != null) {
+        return DateTime(year, month, day);
+      }
+    }
+
+    // Numeric date formats: 12/25/2024 or 12-25-2024
+    try {
+      if (text.contains('/') || text.contains('-')) {
+        final separator = text.contains('/') ? '/' : '-';
+        final parts = text.split(separator);
+        if (parts.length == 3) {
+          final month = int.parse(parts[0]);
+          final day = int.parse(parts[1]);
+          var year = int.parse(parts[2]);
+
+          // Handle 2-digit years
+          if (year < 100) {
+            year += 2000;
+          }
+
+          return DateTime(year, month, day);
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+
+    return null;
+  }
+
+  // ✅ NEW: Get next occurrence of a weekday
+  DateTime _getNextWeekday(int weekday) {
+    final now = DateTime.now();
+    int daysUntil = (weekday - now.weekday) % 7;
+    if (daysUntil == 0) daysUntil = 7; // Next week if today is that day
+    return now.add(Duration(days: daysUntil));
   }
 
   Future<void> _selectDate() async {
@@ -73,35 +258,54 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final taskData = {
+    // Build the task data with proper types
+    final taskData = <String, dynamic>{
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
-      'assigned_to': _assignedToController.text.trim().isEmpty
-          ? null
-          : _assignedToController.text.trim(),
-      'due_date': _dueDate?.toIso8601String(),
     };
 
-    // Add category and priority if manually set
-    if (_category != null) taskData['category'] = _category!;
-    if (_priority != null) taskData['priority'] = _priority!;
-    if (widget.task != null) taskData['status'] = _status;
+    // Add optional fields only if they have values
+    final assignedTo = _assignedToController.text.trim();
+    if (assignedTo.isNotEmpty) {
+      taskData['assigned_to'] = assignedTo;
+    }
+
+    if (_dueDate != null) {
+      taskData['due_date'] = _dueDate!.toIso8601String();
+    }
+
+    if (_category != null) {
+      taskData['category'] = _category!;
+    }
+
+    if (_priority != null) {
+      taskData['priority'] = _priority!;
+    }
+
+    if (widget.task != null) {
+      taskData['status'] = _status;
+    }
+
+    // ✅ Add classification data - backend now supports these fields!
+    if (_autoClassification != null) {
+      final extractedEntities = _autoClassification!['extracted_entities'];
+      if (extractedEntities != null && extractedEntities is Map) {
+        taskData['extracted_entities'] = Map<String, dynamic>.from(
+          extractedEntities,
+        );
+      }
+
+      final suggestedActions = _autoClassification!['suggested_actions'];
+      if (suggestedActions != null && suggestedActions is List) {
+        taskData['suggested_actions'] = List<String>.from(
+          suggestedActions.map((e) => e.toString()),
+        );
+      }
+    }
 
     try {
       if (widget.task == null) {
-        // Create new task - show classification first
-        if (!_showClassification) {
-          // Simulate classification (in real app, call API to get classification)
-          setState(() {
-            _showClassification = true;
-            _classification = {
-              'category': _category ?? 'general',
-              'priority': _priority ?? 'low',
-            };
-          });
-          return;
-        }
-
+        // Create new task
         await ref.read(taskNotifierProvider.notifier).createTask(taskData);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -278,6 +482,90 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           },
                         ),
                         const SizedBox(height: 20),
+
+                        // Auto-Classification Preview
+                        if (_showAutoClassification &&
+                            _autoClassification != null) ...[
+                          _buildAutoClassificationCard(isDark),
+                          const SizedBox(height: 24),
+                        ],
+
+                        // Manual Override Section
+                        Text(
+                          _showAutoClassification
+                              ? 'Override Classification'
+                              : 'Classification',
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _category,
+                                decoration: const InputDecoration(
+                                  labelText: 'Category',
+                                  prefixIcon: Icon(Icons.category, size: 20),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'scheduling',
+                                    child: Text('Scheduling'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'finance',
+                                    child: Text('Finance'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'technical',
+                                    child: Text('Technical'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'safety',
+                                    child: Text('Safety'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'general',
+                                    child: Text('General'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() => _category = value);
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: DropdownButtonFormField<String>(
+                                value: _priority,
+                                decoration: const InputDecoration(
+                                  labelText: 'Priority',
+                                  prefixIcon: Icon(Icons.flag, size: 20),
+                                ),
+                                items: const [
+                                  DropdownMenuItem(
+                                    value: 'high',
+                                    child: Text('High'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'medium',
+                                    child: Text('Medium'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'low',
+                                    child: Text('Low'),
+                                  ),
+                                ],
+                                onChanged: (value) {
+                                  setState(() => _priority = value);
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+
                         // Due Date
                         InkWell(
                           onTap: _selectDate,
@@ -313,6 +601,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           ),
                         ),
                         const SizedBox(height: 20),
+
                         // Assigned To
                         TextFormField(
                           controller: _assignedToController,
@@ -322,187 +611,12 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             prefixIcon: Icon(Icons.person),
                           ),
                         ),
-                        const SizedBox(height: 28),
-                        // Classification Preview
-                        if (_showClassification && _classification != null) ...[
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: AppTheme.infoColor.withValues(
-                                    alpha: .1,
-                                  ),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.auto_awesome,
-                                  size: 20,
-                                  color: AppTheme.infoColor,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                'Auto-Classification',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(20),
-                            decoration: BoxDecoration(
-                              color: AppTheme.infoColor.withValues(alpha: .05),
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: AppTheme.infoColor.withValues(alpha: .2),
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.category,
-                                      size: 20,
-                                      color: AppTheme.infoColor,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Category: ',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        _classification!['category'],
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              color: AppTheme.infoColor,
-                                            ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  children: [
-                                    Icon(
-                                      Icons.flag,
-                                      size: 20,
-                                      color: AppTheme.infoColor,
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Priority: ',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodyMedium,
-                                    ),
-                                    Expanded(
-                                      child: Text(
-                                        _classification!['priority'],
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.w700,
-                                              color: AppTheme.infoColor,
-                                            ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'Override Classification',
-                            style: Theme.of(context).textTheme.titleSmall
-                                ?.copyWith(
-                                  color: isDark
-                                      ? AppTheme.darkTextSecondary
-                                      : AppTheme.lightTextSecondary,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-                          // Override options
-                          Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: _category,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Category',
-                                    prefixIcon: Icon(Icons.category, size: 20),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'scheduling',
-                                      child: Text('Scheduling'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'finance',
-                                      child: Text('Finance'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'technical',
-                                      child: Text('Technical'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'safety',
-                                      child: Text('Safety'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'general',
-                                      child: Text('General'),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() => _category = value);
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  initialValue: _priority,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Priority',
-                                    prefixIcon: Icon(Icons.flag, size: 20),
-                                  ),
-                                  items: const [
-                                    DropdownMenuItem(
-                                      value: 'high',
-                                      child: Text('High'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'medium',
-                                      child: Text('Medium'),
-                                    ),
-                                    DropdownMenuItem(
-                                      value: 'low',
-                                      child: Text('Low'),
-                                    ),
-                                  ],
-                                  onChanged: (value) {
-                                    setState(() => _priority = value);
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 28),
-                        ],
+                        const SizedBox(height: 20),
+
                         // Status (only for edit)
                         if (widget.task != null) ...[
                           DropdownButtonFormField<String>(
-                            initialValue: _status,
+                            value: _status,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               prefixIcon: Icon(Icons.sync_alt),
@@ -529,6 +643,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           ),
                           const SizedBox(height: 28),
                         ],
+
                         // Submit Button
                         SizedBox(
                           width: double.infinity,
@@ -549,17 +664,12 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      Icon(
-                                        _showClassification
-                                            ? Icons.check
-                                            : Icons.arrow_forward,
-                                        size: 20,
-                                      ),
+                                      const Icon(Icons.check, size: 20),
                                       const SizedBox(width: 8),
                                       Text(
-                                        _showClassification
+                                        widget.task == null
                                             ? 'Create Task'
-                                            : 'Continue',
+                                            : 'Update Task',
                                       ),
                                     ],
                                   ),
@@ -575,5 +685,268 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         },
       ),
     );
+  }
+
+  Widget _buildAutoClassificationCard(bool isDark) {
+    final classification = _autoClassification!;
+    final confidence = classification['confidence'] as Map<String, dynamic>?;
+
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: AppTheme.infoColor.withValues(alpha: .05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.infoColor.withValues(alpha: .2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.infoColor.withValues(alpha: .1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.auto_awesome,
+                  size: 20,
+                  color: AppTheme.infoColor,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Auto-Classification',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+              if (confidence != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.successColor.withValues(alpha: .1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '${((confidence['category'] as double) * 100).toInt()}% confident',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.successColor,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
+
+          // Category & Priority
+          Row(
+            children: [
+              Expanded(
+                child: _buildInfoRow(
+                  Icons.category,
+                  'Category',
+                  classification['category'] as String,
+                  isDark,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildInfoRow(
+                  Icons.flag,
+                  'Priority',
+                  classification['priority'] as String,
+                  isDark,
+                ),
+              ),
+            ],
+          ),
+
+          // Extracted Entities
+          if (classification['extracted_entities'] != null &&
+              (classification['extracted_entities'] as Map).isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Divider(color: AppTheme.infoColor.withValues(alpha: .2)),
+            const SizedBox(height: 12),
+            Text(
+              'Extracted Information',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildExtractedEntities(
+              classification['extracted_entities'] as Map<String, dynamic>,
+              isDark,
+            ),
+          ],
+
+          // Suggested Actions
+          if (classification['suggested_actions'] != null &&
+              (classification['suggested_actions'] as List).isNotEmpty) ...[
+            const SizedBox(height: 16),
+            Divider(color: AppTheme.infoColor.withValues(alpha: .2)),
+            const SizedBox(height: 12),
+            Text(
+              'Suggested Actions',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: isDark
+                    ? AppTheme.darkTextSecondary
+                    : AppTheme.lightTextSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: (classification['suggested_actions'] as List)
+                  .map(
+                    (action) => Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.infoColor.withValues(alpha: .1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.check_circle_outline,
+                            size: 14,
+                            color: AppTheme.infoColor,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            action.toString(),
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.infoColor,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value, bool isDark) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: AppTheme.infoColor),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: isDark
+                      ? AppTheme.darkTextSecondary
+                      : AppTheme.lightTextSecondary,
+                ),
+              ),
+              Text(
+                value.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppTheme.infoColor,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExtractedEntities(Map<String, dynamic> entities, bool isDark) {
+    final items = <Widget>[];
+
+    entities.forEach((key, value) {
+      if (value is List && value.isNotEmpty) {
+        items.add(
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(_getEntityIcon(key), size: 14, color: AppTheme.infoColor),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: value
+                        .map(
+                          (item) => Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.infoColor.withValues(alpha: .08),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
+                            child: Text(
+                              item.toString(),
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.infoColor,
+                              ),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }
+    });
+
+    return Column(children: items);
+  }
+
+  IconData _getEntityIcon(String entityType) {
+    switch (entityType) {
+      case 'dates':
+        return Icons.calendar_today;
+      case 'times':
+        return Icons.access_time;
+      case 'people':
+        return Icons.person;
+      case 'locations':
+        return Icons.location_on;
+      default:
+        return Icons.info_outline;
+    }
   }
 }

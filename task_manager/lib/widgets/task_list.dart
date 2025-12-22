@@ -85,6 +85,12 @@ class TaskCard extends ConsumerWidget {
     final statusColor = _getStatusColor(task.status);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // Check if task has classification data
+    final hasEntities =
+        task.extractedEntities != null && task.extractedEntities!.isNotEmpty;
+    final hasActions =
+        task.suggestedActions != null && task.suggestedActions!.isNotEmpty;
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
@@ -316,6 +322,47 @@ class TaskCard extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                 ),
               ],
+
+              // ✅ NEW: Display Extracted Entities
+              if (hasEntities) ...[
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: _buildEntityChips(task.extractedEntities!, isDark),
+                ),
+              ],
+
+              // ✅ NEW: Display Suggested Actions (first 2)
+              if (hasActions) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.lightbulb_outline,
+                      size: 14,
+                      color: isDark
+                          ? AppTheme.darkTextSecondary
+                          : AppTheme.lightTextSecondary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        task.suggestedActions!.take(2).join(' • '),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: isDark
+                              ? AppTheme.darkTextSecondary
+                              : AppTheme.lightTextSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
               const SizedBox(height: 14),
               // Footer Info
               Wrap(
@@ -401,5 +448,67 @@ class TaskCard extends ConsumerWidget {
         ),
       ),
     );
+  }
+
+  // ✅ NEW: Build entity chips
+  List<Widget> _buildEntityChips(Map<String, dynamic> entities, bool isDark) {
+    final chips = <Widget>[];
+
+    entities.forEach((key, value) {
+      if (value is List && value.isNotEmpty) {
+        // Take only first 2 items from each entity type
+        for (final item in value.take(2)) {
+          chips.add(
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.infoColor.withValues(alpha: .1),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: AppTheme.infoColor.withValues(alpha: .3),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _getEntityIcon(key),
+                    size: 10,
+                    color: AppTheme.infoColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    item.toString(),
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.infoColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+      }
+    });
+
+    return chips;
+  }
+
+  // ✅ NEW: Get icon for entity type
+  IconData _getEntityIcon(String entityType) {
+    switch (entityType) {
+      case 'dates':
+        return Icons.calendar_today;
+      case 'times':
+        return Icons.access_time;
+      case 'people':
+        return Icons.person;
+      case 'locations':
+        return Icons.location_on;
+      default:
+        return Icons.info_outline;
+    }
   }
 }

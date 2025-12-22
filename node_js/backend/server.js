@@ -111,7 +111,7 @@ function extractEntities(text) {
   return entities;
 }
 
-// Validation schemas
+// ✅ FIXED: Updated validation schemas to include classification fields
 const taskSchema = Joi.object({
   title: Joi.string().required().min(3).max(200),
   description: Joi.string().allow('', null),
@@ -119,7 +119,13 @@ const taskSchema = Joi.object({
   priority: Joi.string().valid('high', 'medium', 'low'),
   status: Joi.string().valid('pending', 'in_progress', 'completed').default('pending'),
   assigned_to: Joi.string().allow('', null),
-  due_date: Joi.date().iso().allow(null)
+  due_date: Joi.date().iso().allow(null),
+  // ✅ NEW: Allow classification fields from Flutter app
+  extracted_entities: Joi.object().pattern(
+    Joi.string(),
+    Joi.array().items(Joi.string())
+  ).optional(),
+  suggested_actions: Joi.array().items(Joi.string()).optional()
 });
 
 const updateTaskSchema = Joi.object({
@@ -129,7 +135,13 @@ const updateTaskSchema = Joi.object({
   priority: Joi.string().valid('high', 'medium', 'low'),
   status: Joi.string().valid('pending', 'in_progress', 'completed'),
   assigned_to: Joi.string().allow('', null),
-  due_date: Joi.date().iso().allow(null)
+  due_date: Joi.date().iso().allow(null),
+  // ✅ NEW: Allow classification fields in updates too
+  extracted_entities: Joi.object().pattern(
+    Joi.string(),
+    Joi.array().items(Joi.string())
+  ).optional(),
+  suggested_actions: Joi.array().items(Joi.string()).optional()
 }).min(1);
 
 // POST /api/tasks - Create a new task
@@ -143,6 +155,7 @@ app.post('/api/tasks', async (req, res) => {
     // Auto-classify if not provided
     const classification = classifyTask(value.title, value.description);
     
+    // ✅ FIXED: Use client-provided classification if available, otherwise use server classification
     const taskData = {
       title: value.title,
       description: value.description || null,
@@ -151,8 +164,9 @@ app.post('/api/tasks', async (req, res) => {
       status: value.status || 'pending',
       assigned_to: value.assigned_to || null,
       due_date: value.due_date || null,
-      extracted_entities: classification.extracted_entities,
-      suggested_actions: classification.suggested_actions,
+      // ✅ Use client classification if provided, otherwise use server classification
+      extracted_entities: value.extracted_entities || classification.extracted_entities,
+      suggested_actions: value.suggested_actions || classification.suggested_actions,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
@@ -324,6 +338,27 @@ app.delete('/api/tasks/:id', async (req, res) => {
   }
 });
 
+// ✅ NEW: Endpoint to classify text without creating a task
+app.post('/api/classify', async (req, res) => {
+  try {
+    const { title, description } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    const classification = classifyTask(title, description);
+    
+    res.json({
+      success: true,
+      data: classification
+    });
+  } catch (err) {
+    console.error('Error classifying task:', err);
+    res.status(500).json({ error: 'Failed to classify task' });
+  }
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -331,6 +366,8 @@ app.get('/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
+  console.log(`✅ Classification endpoints enabled`);
+  console.log(`✅ Database schema supports extracted_entities and suggested_actions`);
 });
 
 export { classifyTask, extractEntities };
