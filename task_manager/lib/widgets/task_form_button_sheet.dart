@@ -46,7 +46,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       _dueDate = widget.task!.dueDate;
     }
 
-    // Add listeners for auto-classification
     _titleController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
   }
@@ -62,7 +61,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   }
 
   void _onTextChanged() {
-    // Trigger auto-classification when text changes
     if (_titleController.text.trim().length >= 3) {
       _performAutoClassification();
     }
@@ -79,12 +77,9 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     setState(() {
       _autoClassification = classification;
       _showAutoClassification = true;
-
-      // ✅ Auto-populate category and priority
       _category = classification['category'] as String?;
       _priority = classification['priority'] as String?;
 
-      // ✅ NEW: Auto-populate date from extracted entities
       final entities =
           classification['extracted_entities'] as Map<String, dynamic>?;
       if (entities != null && _dueDate == null) {
@@ -94,7 +89,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         }
       }
 
-      // ✅ NEW: Auto-populate assignee from extracted entities
       if (entities != null && _assignedToController.text.isEmpty) {
         final people = entities['people'] as List?;
         if (people != null && people.isNotEmpty) {
@@ -104,12 +98,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     });
   }
 
-  // ✅ Parse date strings like "today", "tomorrow", "dec 12", etc.
   DateTime? _parseDateFromText(String dateText) {
     final now = DateTime.now();
     final text = dateText.toLowerCase().trim();
 
-    // Relative dates
     if (text == 'today') {
       return now;
     } else if (text == 'tomorrow') {
@@ -118,7 +110,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       return now.subtract(const Duration(days: 1));
     }
 
-    // Weekdays
     if (text == 'monday') return _getNextWeekday(DateTime.monday);
     if (text == 'tuesday') return _getNextWeekday(DateTime.tuesday);
     if (text == 'wednesday') return _getNextWeekday(DateTime.wednesday);
@@ -127,7 +118,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     if (text == 'saturday') return _getNextWeekday(DateTime.saturday);
     if (text == 'sunday') return _getNextWeekday(DateTime.sunday);
 
-    // Relative periods
     if (text.contains('next week')) {
       return now.add(const Duration(days: 7));
     }
@@ -138,7 +128,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       return DateTime(now.year, now.month + 1, now.day);
     }
 
-    // ✅ NEW: Month + Day parsing (e.g., "dec 12", "december 25")
     final monthDayPattern = RegExp(
       r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
       caseSensitive: false,
@@ -165,17 +154,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
 
       final month = monthMap[monthStr.substring(0, 3)];
       if (month != null) {
-        // Use current year or next year if date has passed
         var year = now.year;
         final possibleDate = DateTime(year, month, day);
         if (possibleDate.isBefore(now)) {
-          year++; // Use next year if date already passed
+          year++;
         }
         return DateTime(year, month, day);
       }
     }
 
-    // ✅ Month + Day + Year (e.g., "dec 12 2025")
     final fullDatePattern = RegExp(
       r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})[,\s]+(\d{4})',
       caseSensitive: false,
@@ -207,7 +194,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       }
     }
 
-    // Numeric date formats: 12/25/2024 or 12-25-2024
     try {
       if (text.contains('/') || text.contains('-')) {
         final separator = text.contains('/') ? '/' : '-';
@@ -217,7 +203,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           final day = int.parse(parts[1]);
           var year = int.parse(parts[2]);
 
-          // Handle 2-digit years
           if (year < 100) {
             year += 2000;
           }
@@ -232,11 +217,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     return null;
   }
 
-  // ✅ NEW: Get next occurrence of a weekday
   DateTime _getNextWeekday(int weekday) {
     final now = DateTime.now();
     int daysUntil = (weekday - now.weekday) % 7;
-    if (daysUntil == 0) daysUntil = 7; // Next week if today is that day
+    if (daysUntil == 0) daysUntil = 7;
     return now.add(Duration(days: daysUntil));
   }
 
@@ -258,13 +242,11 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   Future<void> _submitForm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Build the task data with proper types
     final taskData = <String, dynamic>{
       'title': _titleController.text.trim(),
       'description': _descriptionController.text.trim(),
     };
 
-    // Add optional fields only if they have values
     final assignedTo = _assignedToController.text.trim();
     if (assignedTo.isNotEmpty) {
       taskData['assigned_to'] = assignedTo;
@@ -286,7 +268,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       taskData['status'] = _status;
     }
 
-    // ✅ Add classification data - backend now supports these fields!
     if (_autoClassification != null) {
       final extractedEntities = _autoClassification!['extracted_entities'];
       if (extractedEntities != null && extractedEntities is Map) {
@@ -305,7 +286,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
 
     try {
       if (widget.task == null) {
-        // Create new task
         await ref.read(taskNotifierProvider.notifier).createTask(taskData);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -324,7 +304,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           Navigator.pop(context);
         }
       } else {
-        // Update existing task
         await ref
             .read(taskNotifierProvider.notifier)
             .updateTask(widget.task!.id, taskData);
@@ -369,11 +348,16 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     final taskNotifier = ref.watch(taskNotifierProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    // ✅ FIX: Get keyboard height and calculate proper padding
+    final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
+
     return Container(
       decoration: BoxDecoration(
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
+      // ✅ FIX: Add bottom padding for keyboard
+      padding: EdgeInsets.only(bottom: keyboardHeight),
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
         minChildSize: 0.5,
@@ -438,7 +422,13 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  padding: const EdgeInsets.all(20),
+                  // ✅ FIX: Add proper padding to avoid overflow
+                  padding: EdgeInsets.fromLTRB(
+                    20,
+                    20,
+                    20,
+                    20 + MediaQuery.of(context).viewPadding.bottom,
+                  ),
                   child: Form(
                     key: _formKey,
                     child: Column(
@@ -462,6 +452,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             return null;
                           },
                           maxLength: 200,
+                          // ✅ FIX: Prevent keyboard from dismissing on submit
+                          textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 20),
                         // Description
@@ -480,6 +472,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             }
                             return null;
                           },
+                          textInputAction: TextInputAction.newline,
                         ),
                         const SizedBox(height: 20),
 
@@ -499,70 +492,61 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _category,
-                                decoration: const InputDecoration(
-                                  labelText: 'Category',
-                                  prefixIcon: Icon(Icons.category, size: 20),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'scheduling',
-                                    child: Text('Scheduling'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'finance',
-                                    child: Text('Finance'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'technical',
-                                    child: Text('Technical'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'safety',
-                                    child: Text('Safety'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'general',
-                                    child: Text('General'),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() => _category = value);
-                                },
-                              ),
+                        DropdownButtonFormField<String>(
+                          initialValue: _category,
+                          itemHeight: 59.6,
+                          decoration: const InputDecoration(
+                            labelText: 'Category',
+                            prefixIcon: Icon(Icons.category, size: 20),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'scheduling',
+                              child: Text('Scheduling'),
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: DropdownButtonFormField<String>(
-                                value: _priority,
-                                decoration: const InputDecoration(
-                                  labelText: 'Priority',
-                                  prefixIcon: Icon(Icons.flag, size: 20),
-                                ),
-                                items: const [
-                                  DropdownMenuItem(
-                                    value: 'high',
-                                    child: Text('High'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'medium',
-                                    child: Text('Medium'),
-                                  ),
-                                  DropdownMenuItem(
-                                    value: 'low',
-                                    child: Text('Low'),
-                                  ),
-                                ],
-                                onChanged: (value) {
-                                  setState(() => _priority = value);
-                                },
-                              ),
+                            DropdownMenuItem(
+                              value: 'finance',
+                              child: Text('Finance'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'technical',
+                              child: Text('Technical'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'safety',
+                              child: Text('Safety'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'general',
+                              child: Text('General'),
                             ),
                           ],
+                          onChanged: (value) {
+                            setState(() => _category = value);
+                          },
+                        ),
+                        const SizedBox(height: 20),
+                        DropdownButtonFormField<String>(
+                          initialValue: _priority,
+                          itemHeight: 59.6,
+                          decoration: const InputDecoration(
+                            labelText: 'Priority',
+                            prefixIcon: Icon(Icons.flag, size: 20),
+                          ),
+                          items: const [
+                            DropdownMenuItem(
+                              value: 'high',
+                              child: Text('High'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'medium',
+                              child: Text('Medium'),
+                            ),
+                            DropdownMenuItem(value: 'low', child: Text('Low')),
+                          ],
+                          onChanged: (value) {
+                            setState(() => _priority = value);
+                          },
                         ),
                         const SizedBox(height: 20),
 
@@ -610,13 +594,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             hintText: 'Enter assignee name',
                             prefixIcon: Icon(Icons.person),
                           ),
+                          textInputAction: TextInputAction.done,
                         ),
                         const SizedBox(height: 20),
 
                         // Status (only for edit)
                         if (widget.task != null) ...[
                           DropdownButtonFormField<String>(
-                            value: _status,
+                            initialValue: _status,
+                            itemHeight: 59.6,
                             decoration: const InputDecoration(
                               labelText: 'Status',
                               prefixIcon: Icon(Icons.sync_alt),
