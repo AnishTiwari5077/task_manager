@@ -9,7 +9,7 @@ A production-ready task management application that automatically classifies and
 
 ## 📋 Project Overview
 
-Smart Site Task Manager is a full-stack application that helps teams manage tasks efficiently with automatic categorization and prioritization. The system analyzes task content to:
+ Task Manager is a full-stack application that helps teams manage tasks efficiently with automatic categorization and prioritization. The system analyzes task content to:
 
 - **Detect categories** (Scheduling, Finance, Technical, Safety, General)
 - **Assign priorities** (High, Medium, Low) based on urgency indicators
@@ -84,7 +84,8 @@ lib/
 ├── models/
 │   └── task.dart           # Task data model
 ├── services/
-│   └── api_service.dart    # API communication layer
+│   └── api_service.dart   # API communication layer
+     └── task_classification_services.dart
 ├── providers/
 │   └── task_providers.dart # Riverpod state management
 ├── screens/
@@ -94,6 +95,7 @@ lib/
     ├── filter_chips.dart
     ├── task_list.dart
     └── task_form_bottom_sheet.dart
+    └── task_filter_dialog.dart
 ```
 
 ## 🗄️ Database Schema
@@ -141,7 +143,7 @@ CREATE TABLE task_history (
 
 1. **Clone the repository**
 ```bash
-git clone https://github.com/yourusername/smart-task-manager.git
+git clone https://github.com/AnishTiwari5077/task-manager.git
 cd smart-task-manager/backend
 ```
 
@@ -378,19 +380,37 @@ npm test
 
 ### Sample Test Output
 ```
-Task Classification
-  ✓ should classify scheduling task with high priority
-  ✓ should classify finance task with medium priority
-  ✓ should classify technical task with low priority
-  ✓ should classify safety task correctly
-  ✓ should default to general category
-
-Entity Extraction
-  ✓ should extract dates from text
-  ✓ should extract people names
-  ✓ should extract action verbs
-
-Tests: 8 passed, 8 total
+ PASS  ./classification.test.js
+  classifyTask
+    √ should classify scheduling tasks correctly (3 ms)                                                                                                         
+    √ should classify finance tasks correctly (1 ms)                                                                                                            
+    √ should classify technical tasks correctly (1 ms)                                                                                                          
+    √ should classify safety tasks correctly (1 ms)                                                                                                             
+    √ should default to general category when no keywords match (1 ms)                                                                                          
+    √ should detect high priority from urgent keywords                                                                                                          
+    √ should detect medium priority from important keywords                                                                                                     
+    √ should default to low priority when no priority keywords found                                                                                            
+    √ should handle empty description (6 ms)                                                                                                                    
+    √ should handle undefined description                                                                                                                       
+  extractEntities                                                                                                                                               
+    √ should extract date patterns correctly                                                                                                                    
+    √ should extract people names after "with", "by", "assign to" (1 ms)                                                                                        
+    √ should extract action verbs from text (2 ms)                                                                                                              
+    √ should handle alternative date formats (1 ms)                                                                                                             
+    √ should return empty arrays when no entities found (2 ms)                                                                                                  
+    √ should be case insensitive for date extraction (1 ms)                                                                                                     
+    √ should extract multiple people from complex text                                                                                                          
+    √ should extract all relevant action verbs                                                                                                                  
+  Integration tests                                                                                                                                             
+    √ should handle complex real-world task classification (1 ms)                                                                                               
+    √ should prioritize first matching category                                                                                                                 
+    √ should handle mixed priority keywords                                                                                                                     
+                                                                                                                                                                
+Test Suites: 1 passed, 1 total
+Tests:       21 passed, 21 total
+Snapshots:   0 total
+Time:        1.132 s
+Ran all test suites.
 ```
 
 ## 🎨 Screenshots
@@ -530,8 +550,8 @@ MIT License - feel free to use this project for learning or commercial purposes.
 ## 👤 Author
 
 **Your Name**
-- GitHub: [@yourusername](https://github.com/yourusername)
-- Email: your.email@example.com
+- GitHub: [@AnishTiwairi5077](https://github.com/AnishTiwair5077)
+- Email: anishtiwari5077@gmail.con
 
 ## 🙏 Acknowledgments
 
@@ -545,4 +565,5 @@ MIT License - feel free to use this project for learning or commercial purposes.
 - `your-app.onrender.com` with actual Render URL
 - Supabase credentials in `.env`
 - GitHub repository URL
-- Your contact information
+  
+
