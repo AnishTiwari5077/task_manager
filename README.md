@@ -423,6 +423,14 @@ Ran all test suites.
 <img width="315" height="700" alt="Screenshot_1766495086" src="https://github.com/user-attachments/assets/90a3a404-ad37-4653-8fe2-d7e805d72999" />
 <img width="315" height="700" alt="Screenshot_1766495074" src="https://github.com/user-attachments/assets/b19dff54-27ac-403c-b0ce-e20d16adf11b" />
 <img width="315" height="700" alt="Screenshot_1766495056" src="https://github.com/user-attachments/assets/b4560fcc-3048-4a12-9fe6-94fa16afbb93" />
+<img width="315" height="700" alt="Screenshot_1766495171" src="https://github.com/user-attachments/assets/a717a244-2795-40ff-ae0b-beb14b35a4b2" />
+<img width="315" height="700" alt="Screenshot_1766495027" src="https://github.com/user-attachments/assets/202955c7-ad29-49ed-a05f-10005abcae31" />
+<img width="315" height="700" alt="Screenshot_1766495021" src="https://github.com/user-attachments/assets/a09a8124-5557-4d12-9b31-83f79c6c9a13" />
+<img width="315" height="700" alt="Screenshot_1766495016" src="https://github.com/user-attachments/assets/5cadb7ad-fb3c-49ee-806b-bd408729d1f8" />
+<img width="315" height="700" alt="Screenshot_1766495007" src="https://github.com/user-attachments/assets/5a026913-9254-4aa8-b9a3-4ef546e9ab77" />
+<img width="315" height="700" alt="Screenshot_1766494999" src="https://github.com/user-attachments/assets/d240a39b-5a8b-4862-a76e-e438937bc8a2" />
+
+
 
 
 ## 🚢 Deployment
@@ -558,5 +566,6 @@ MIT License - feel free to use this project for learning or commercial purposes.
 - Supabase credentials in `.env`
 - GitHub repository URL
   
+
 
 
