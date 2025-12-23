@@ -47,7 +47,7 @@ final taskCountsProvider = Provider<Map<String, int>>((ref) {
       };
     },
     loading: () => {'pending': 0, 'in_progress': 0, 'completed': 0, 'total': 0},
-    error: (_, __) => {
+    error: (_, _) => {
       'pending': 0,
       'in_progress': 0,
       'completed': 0,
@@ -76,7 +76,7 @@ final taskCountsByCategoryProvider = Provider<Map<String, int>>((ref) {
       'safety': 0,
       'general': 0,
     },
-    error: (_, __) => {
+    error: (_, _) => {
       'scheduling': 0,
       'finance': 0,
       'technical': 0,
