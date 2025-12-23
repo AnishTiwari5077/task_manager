@@ -195,7 +195,7 @@ class TaskCard extends ConsumerWidget {
                               ],
                             ),
                             content: const Text(
-                              'Are you sure you want to delete this task? This action cannot be undone.',
+                              'Are you sure you want to delete this tasks? This action cannot be undone.',
                             ),
                             actions: [
                               TextButton(
@@ -323,7 +323,6 @@ class TaskCard extends ConsumerWidget {
                 ),
               ],
 
-              // ✅ NEW: Display Extracted Entities
               if (hasEntities) ...[
                 const SizedBox(height: 12),
                 Wrap(
@@ -333,7 +332,6 @@ class TaskCard extends ConsumerWidget {
                 ),
               ],
 
-              // ✅ NEW: Display Suggested Actions (first 2)
               if (hasActions) ...[
                 const SizedBox(height: 10),
                 Row(
@@ -450,7 +448,6 @@ class TaskCard extends ConsumerWidget {
     );
   }
 
-  // ✅ NEW: Build entity chips
   List<Widget> _buildEntityChips(Map<String, dynamic> entities, bool isDark) {
     final chips = <Widget>[];
 
@@ -496,7 +493,6 @@ class TaskCard extends ConsumerWidget {
     return chips;
   }
 
-  // ✅ NEW: Get icon for entity type
   IconData _getEntityIcon(String entityType) {
     switch (entityType) {
       case 'dates':

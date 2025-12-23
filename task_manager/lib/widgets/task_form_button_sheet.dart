@@ -348,7 +348,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     final taskNotifier = ref.watch(taskNotifierProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // ✅ FIX: Get keyboard height and calculate proper padding
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -356,7 +355,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      // ✅ FIX: Add bottom padding for keyboard
+
       padding: EdgeInsets.only(bottom: keyboardHeight),
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
@@ -422,7 +421,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-                  // ✅ FIX: Add proper padding to avoid overflow
+
                   padding: EdgeInsets.fromLTRB(
                     20,
                     20,
@@ -452,7 +451,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             return null;
                           },
                           maxLength: 200,
-                          // ✅ FIX: Prevent keyboard from dismissing on submit
+
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 20),
@@ -483,7 +482,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           const SizedBox(height: 24),
                         ],
 
-                        // Manual Override Section
                         Text(
                           _showAutoClassification
                               ? 'Override Classification'

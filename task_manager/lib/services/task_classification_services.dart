@@ -1,8 +1,4 @@
-import 'package:flutter/foundation.dart';
-
-/// Service for automatically classifying tasks based on content analysis
 class TaskClassificationService {
-  // Category keywords mapping
   static const Map<String, List<String>> _categoryKeywords = {
     'scheduling': [
       'meeting',
