@@ -4,7 +4,11 @@ A production-ready task management application that automatically classifies and
 
 ## 🚀 Live Demo
 
-- **Backend API**: `https://task-manager1-owu7.onrender.com`
+- **Backend API**: https://task-manager1-owu7.onrender.com
+- **Test Health Check First**:https://task-manager1-owu7.onrender.com/health
+- **Get All Tasks**:https://task-manager1-owu7.onrender.com/api/tasks 
+
+  
 
 
 ## 📋 Project Overview
@@ -566,6 +570,7 @@ MIT License - feel free to use this project for learning or commercial purposes.
 - Supabase credentials in `.env`
 - GitHub repository URL
   
+
 
 
 
