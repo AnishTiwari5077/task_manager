@@ -4,8 +4,8 @@ A production-ready task management application that automatically classifies and
 
 ## 🚀 Live Demo
 
-- **Backend API**: `https://your-app.onrender.com`
-- **API Health Check**: `https://your-app.onrender.com/health`
+- **Backend API**: `https://task-manager1-owu7.onrender.com`
+
 
 ## 📋 Project Overview
 
@@ -229,7 +229,7 @@ Content-Type: application/json
 {
   "title": "Schedule urgent meeting with team",
   "description": "Discuss budget allocation for Q4",
-  "assigned_to": "John Doe",
+  "assigned_to": "John ",
   "due_date": "2025-12-25T10:00:00Z"
 }
 ```
@@ -245,11 +245,11 @@ Content-Type: application/json
     "category": "scheduling",
     "priority": "high",
     "status": "pending",
-    "assigned_to": "John Doe",
+    "assigned_to": "John ",
     "due_date": "2025-12-25T10:00:00Z",
     "extracted_entities": {
       "dates": ["2025-12-25"],
-      "people": ["team"],
+      "people": ["John"],
       "actions": ["schedule", "discuss"]
     },
     "suggested_actions": [
@@ -415,23 +415,15 @@ Ran all test suites.
 
 ## 🎨 Screenshots
 
-### Dashboard View
-![Dashboard](screenshots/dashboard.png)
-- Summary cards showing task counts
-- Filter chips for quick category filtering
-- Task list with color-coded categories
+<img width="315" height="700" alt="Screenshot_1766495171" src="https://github.com/user-attachments/assets/5705e684-8c1d-463c-9226-9b605bd989dd" />
+<img width="315" height="700" alt="Screenshot_1766495160" src="https://github.com/user-attachments/assets/5dbe4e37-6cbc-46ad-860d-b6780dd50362" />
+<img width="315" height="700" alt="Screenshot_1766495121" src="https://github.com/user-attachments/assets/31e40aa0-5240-4d2d-a7a4-30dda6f92d65" />
+<img width="315" height="700" alt="Screenshot_1766495108" src="https://github.com/user-attachments/assets/1e58855e-55e5-4f1b-acbf-15c4a7ff4f0d" />
+<img width="315" height="700" alt="Screenshot_1766495101" src="https://github.com/user-attachments/assets/b2a48bd9-b20e-4718-89be-117943f060ff" />
+<img width="315" height="700" alt="Screenshot_1766495086" src="https://github.com/user-attachments/assets/90a3a404-ad37-4653-8fe2-d7e805d72999" />
+<img width="315" height="700" alt="Screenshot_1766495074" src="https://github.com/user-attachments/assets/b19dff54-27ac-403c-b0ce-e20d16adf11b" />
+<img width="315" height="700" alt="Screenshot_1766495056" src="https://github.com/user-attachments/assets/b4560fcc-3048-4a12-9fe6-94fa16afbb93" />
 
-### Task Creation
-![Task Form](screenshots/task-form.png)
-- Auto-classification preview
-- Override options for category/priority
-- Form validation
-
-### Task Details
-![Task Card](screenshots/task-card.png)
-- Category and priority badges
-- Status indicator
-- Quick actions menu
 
 ## 🚢 Deployment
 
@@ -566,4 +558,5 @@ MIT License - feel free to use this project for learning or commercial purposes.
 - Supabase credentials in `.env`
 - GitHub repository URL
   
+
 
