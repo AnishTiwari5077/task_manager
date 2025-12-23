@@ -8,22 +8,27 @@ class FilterDialog extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final statusFilter = ref.watch(statusFilterProvider);
-    final _ = ref.watch(categoryFilterProvider);
     final priorityFilter = ref.watch(priorityFilterProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
 
     return AlertDialog(
-      title: const Text('Filter Tasks'),
+      backgroundColor: colorScheme.surface,
+      surfaceTintColor: colorScheme.surface,
+      title: Text('Filter Tasks', style: theme.textTheme.titleLarge),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Status', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text('Status', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
-                FilterChip(
-                  label: const Text('Pending'),
+                _chip(
+                  context: context,
+                  label: 'Pending',
                   selected: statusFilter == 'pending',
                   onSelected: (selected) {
                     ref.read(statusFilterProvider.notifier).state = selected
@@ -31,8 +36,9 @@ class FilterDialog extends ConsumerWidget {
                         : null;
                   },
                 ),
-                FilterChip(
-                  label: const Text('In Progress'),
+                _chip(
+                  context: context,
+                  label: 'In Progress',
                   selected: statusFilter == 'in_progress',
                   onSelected: (selected) {
                     ref.read(statusFilterProvider.notifier).state = selected
@@ -40,8 +46,9 @@ class FilterDialog extends ConsumerWidget {
                         : null;
                   },
                 ),
-                FilterChip(
-                  label: const Text('Completed'),
+                _chip(
+                  context: context,
+                  label: 'Completed',
                   selected: statusFilter == 'completed',
                   onSelected: (selected) {
                     ref.read(statusFilterProvider.notifier).state = selected
@@ -51,16 +58,15 @@ class FilterDialog extends ConsumerWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            const Text(
-              'Priority',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            const SizedBox(height: 20),
+            Text('Priority', style: theme.textTheme.titleSmall),
+            const SizedBox(height: 8),
             Wrap(
               spacing: 8,
               children: [
-                FilterChip(
-                  label: const Text('High'),
+                _chip(
+                  context: context,
+                  label: 'High',
                   selected: priorityFilter == 'high',
                   onSelected: (selected) {
                     ref.read(priorityFilterProvider.notifier).state = selected
@@ -68,8 +74,9 @@ class FilterDialog extends ConsumerWidget {
                         : null;
                   },
                 ),
-                FilterChip(
-                  label: const Text('Medium'),
+                _chip(
+                  context: context,
+                  label: 'Medium',
                   selected: priorityFilter == 'medium',
                   onSelected: (selected) {
                     ref.read(priorityFilterProvider.notifier).state = selected
@@ -77,8 +84,9 @@ class FilterDialog extends ConsumerWidget {
                         : null;
                   },
                 ),
-                FilterChip(
-                  label: const Text('Low'),
+                _chip(
+                  context: context,
+                  label: 'Low',
                   selected: priorityFilter == 'low',
                   onSelected: (selected) {
                     ref.read(priorityFilterProvider.notifier).state = selected
@@ -106,6 +114,33 @@ class FilterDialog extends ConsumerWidget {
           child: const Text('Apply'),
         ),
       ],
+    );
+  }
+
+  Widget _chip({
+    required BuildContext context,
+    required String label,
+    required bool selected,
+    required ValueChanged<bool> onSelected,
+  }) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return FilterChip(
+      label: Text(
+        label,
+        style: theme.textTheme.labelMedium?.copyWith(
+          color: selected ? colorScheme.primary : colorScheme.onSurface,
+        ),
+      ),
+      selected: selected,
+      onSelected: onSelected,
+      selectedColor: colorScheme.primary.withOpacity(0.15),
+      backgroundColor: colorScheme.surfaceVariant,
+      side: BorderSide(
+        color: selected ? colorScheme.primary : colorScheme.outline,
+      ),
+      showCheckmark: false,
     );
   }
 }
