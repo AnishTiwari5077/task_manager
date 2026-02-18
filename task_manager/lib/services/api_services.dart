@@ -4,7 +4,8 @@ import '../models/task.dart';
 class ApiService {
   late final Dio _dio;
 
-  static const String baseUrl = 'https://task-manager1-owu7.onrender.com';
+  static const String baseUrl = 'http://192.168.1.79:3000';
+  // static const String baseUrl = 'https://task-manager1-owu7.onrender.com';
 
   ApiService() {
     _dio = Dio(

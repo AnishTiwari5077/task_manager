@@ -135,8 +135,8 @@ class FilterDialog extends ConsumerWidget {
       ),
       selected: selected,
       onSelected: onSelected,
-      selectedColor: colorScheme.primary.withOpacity(0.15),
-      backgroundColor: colorScheme.surfaceVariant,
+      selectedColor: colorScheme.primary.withValues(alpha: .15),
+      backgroundColor: colorScheme.surfaceContainerHighest,
       side: BorderSide(
         color: selected ? colorScheme.primary : colorScheme.outline,
       ),
