@@ -28,6 +28,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   Map<String, dynamic>? _autoClassification;
   bool _showAutoClassification = false;
 
+  // FIX: Track whether user has manually edited the assignedTo field
+  // so auto-fill doesn't overwrite intentional user input
+  bool _assignedToManuallyEdited = false;
+
   @override
   void initState() {
     super.initState();
@@ -44,21 +48,45 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       _priority = widget.task!.priority;
       _status = widget.task!.status;
       _dueDate = widget.task!.dueDate;
+
+      // If editing an existing task that already has an assignee,
+      // treat it as manually set so we don't clobber it
+      if (widget.task!.assignedTo != null &&
+          widget.task!.assignedTo!.isNotEmpty) {
+        _assignedToManuallyEdited = true;
+      }
     }
 
     _titleController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
+
+    // FIX: Listen for manual edits to the assignedTo field
+    _assignedToController.addListener(_onAssignedToChanged);
   }
 
   @override
   void dispose() {
     _titleController.removeListener(_onTextChanged);
     _descriptionController.removeListener(_onTextChanged);
+    _assignedToController.removeListener(_onAssignedToChanged);
     _titleController.dispose();
     _descriptionController.dispose();
     _assignedToController.dispose();
     super.dispose();
   }
+
+  // FIX: Detect if user typed into the field themselves
+  void _onAssignedToChanged() {
+    // We set this flag only when the user types, not when we programmatically
+    // update the controller. We distinguish by checking if a classification
+    // is currently running — if not, it's a user edit.
+    if (!_isAutoFilling) {
+      _assignedToManuallyEdited = true;
+    }
+  }
+
+  // FIX: Guard flag so _onAssignedToChanged doesn't fire during auto-fill
+  bool _isAutoFilling = false;
 
   void _onTextChanged() {
     if (_titleController.text.trim().length >= 3) {
@@ -82,6 +110,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
 
       final entities =
           classification['extracted_entities'] as Map<String, dynamic>?;
+
+      // Auto-fill due date if not already set
       if (entities != null && _dueDate == null) {
         final dates = entities['dates'] as List?;
         if (dates != null && dates.isNotEmpty) {
@@ -89,26 +119,40 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         }
       }
 
-      if (entities != null && _assignedToController.text.isEmpty) {
+      // FIX: Only auto-fill Assigned To if user hasn't typed there themselves
+      if (entities != null && !_assignedToManuallyEdited) {
         final people = entities['people'] as List?;
         if (people != null && people.isNotEmpty) {
-          _assignedToController.text = people.first.toString();
+          // FIX: Names come back already capitalized from the service,
+          // but we capitalize again here as a safety net
+          final name = _capitalizeName(people.first.toString());
+
+          _isAutoFilling = true;
+          _assignedToController.text = name;
+          _isAutoFilling = false;
         }
       }
     });
+  }
+
+  /// Capitalizes each word: "john doe" → "John Doe"
+  String _capitalizeName(String name) {
+    return name
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+        })
+        .join(' ');
   }
 
   DateTime? _parseDateFromText(String dateText) {
     final now = DateTime.now();
     final text = dateText.toLowerCase().trim();
 
-    if (text == 'today') {
-      return now;
-    } else if (text == 'tomorrow') {
-      return now.add(const Duration(days: 1));
-    } else if (text == 'yesterday') {
-      return now.subtract(const Duration(days: 1));
-    }
+    if (text == 'today') return now;
+    if (text == 'tomorrow') return now.add(const Duration(days: 1));
+    if (text == 'yesterday') return now.subtract(const Duration(days: 1));
 
     if (text == 'monday') return _getNextWeekday(DateTime.monday);
     if (text == 'tuesday') return _getNextWeekday(DateTime.tuesday);
@@ -118,12 +162,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     if (text == 'saturday') return _getNextWeekday(DateTime.saturday);
     if (text == 'sunday') return _getNextWeekday(DateTime.sunday);
 
-    if (text.contains('next week')) {
-      return now.add(const Duration(days: 7));
-    }
-    if (text.contains('this week')) {
-      return now.add(const Duration(days: 3));
-    }
+    if (text.contains('next week')) return now.add(const Duration(days: 7));
+    if (text.contains('this week')) return now.add(const Duration(days: 3));
     if (text.contains('next month')) {
       return DateTime(now.year, now.month + 1, now.day);
     }
@@ -156,9 +196,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       if (month != null) {
         var year = now.year;
         final possibleDate = DateTime(year, month, day);
-        if (possibleDate.isBefore(now)) {
-          year++;
-        }
+        if (possibleDate.isBefore(now)) year++;
         return DateTime(year, month, day);
       }
     }
@@ -189,9 +227,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       };
 
       final month = monthMap[monthStr.substring(0, 3)];
-      if (month != null) {
-        return DateTime(year, month, day);
-      }
+      if (month != null) return DateTime(year, month, day);
     }
 
     try {
@@ -202,17 +238,11 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           final month = int.parse(parts[0]);
           final day = int.parse(parts[1]);
           var year = int.parse(parts[2]);
-
-          if (year < 100) {
-            year += 2000;
-          }
-
+          if (year < 100) year += 2000;
           return DateTime(year, month, day);
         }
       }
-    } catch (e) {
-      // Ignore parsing errors
-    }
+    } catch (_) {}
 
     return null;
   }
@@ -230,13 +260,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       initialDate: _dueDate ?? DateTime.now(),
       firstDate: DateTime.now(),
       lastDate: DateTime.now().add(const Duration(days: 365)),
-      builder: (context, child) {
-        return Theme(data: Theme.of(context), child: child!);
-      },
+      builder: (context, child) =>
+          Theme(data: Theme.of(context), child: child!),
     );
-    if (picked != null) {
-      setState(() => _dueDate = picked);
-    }
+    if (picked != null) setState(() => _dueDate = picked);
   }
 
   Future<void> _submitForm() async {
@@ -256,17 +283,9 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       taskData['due_date'] = _dueDate!.toIso8601String();
     }
 
-    if (_category != null) {
-      taskData['category'] = _category!;
-    }
-
-    if (_priority != null) {
-      taskData['priority'] = _priority!;
-    }
-
-    if (widget.task != null) {
-      taskData['status'] = _status;
-    }
+    if (_category != null) taskData['category'] = _category!;
+    if (_priority != null) taskData['priority'] = _priority!;
+    if (widget.task != null) taskData['status'] = _status;
 
     if (_autoClassification != null) {
       final extractedEntities = _autoClassification!['extracted_entities'];
@@ -347,7 +366,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   Widget build(BuildContext context) {
     final taskNotifier = ref.watch(taskNotifierProvider);
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
 
     return Container(
@@ -355,7 +373,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         color: Theme.of(context).scaffoldBackgroundColor,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
       ),
-
       padding: EdgeInsets.only(bottom: keyboardHeight),
       child: DraggableScrollableSheet(
         initialChildSize: 0.9,
@@ -365,7 +382,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         builder: (context, scrollController) {
           return Column(
             children: [
-              // Handle
+              // Handle bar
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 width: 40,
@@ -377,6 +394,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
+
               // Header
               Padding(
                 padding: const EdgeInsets.all(20),
@@ -413,15 +431,16 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                   ],
                 ),
               ),
+
               Divider(
                 height: 1,
                 color: isDark ? AppTheme.darkDivider : AppTheme.lightDivider,
               ),
-              // Form
+
+              // Form body
               Expanded(
                 child: SingleChildScrollView(
                   controller: scrollController,
-
                   padding: EdgeInsets.fromLTRB(
                     20,
                     20,
@@ -451,10 +470,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             return null;
                           },
                           maxLength: 200,
-
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 20),
+
                         // Description
                         TextFormField(
                           controller: _descriptionController,
@@ -475,7 +494,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Auto-Classification Preview
+                        // Auto-Classification preview
                         if (_showAutoClassification &&
                             _autoClassification != null) ...[
                           _buildAutoClassificationCard(isDark),
@@ -490,8 +509,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               ?.copyWith(fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 12),
+
+                        // Category dropdown
                         DropdownButtonFormField<String>(
-                          initialValue: _category,
+                          value: _category,
                           itemHeight: 59.6,
                           decoration: const InputDecoration(
                             labelText: 'Category',
@@ -519,13 +540,14 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               child: Text('General'),
                             ),
                           ],
-                          onChanged: (value) {
-                            setState(() => _category = value);
-                          },
+                          onChanged: (value) =>
+                              setState(() => _category = value),
                         ),
                         const SizedBox(height: 20),
+
+                        // Priority dropdown
                         DropdownButtonFormField<String>(
-                          initialValue: _priority,
+                          value: _priority,
                           itemHeight: 59.6,
                           decoration: const InputDecoration(
                             labelText: 'Priority',
@@ -542,13 +564,12 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             ),
                             DropdownMenuItem(value: 'low', child: Text('Low')),
                           ],
-                          onChanged: (value) {
-                            setState(() => _priority = value);
-                          },
+                          onChanged: (value) =>
+                              setState(() => _priority = value),
                         ),
                         const SizedBox(height: 20),
 
-                        // Due Date
+                        // Due date picker
                         InkWell(
                           onTap: _selectDate,
                           borderRadius: BorderRadius.circular(12),
@@ -560,9 +581,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                               suffixIcon: _dueDate != null
                                   ? IconButton(
                                       icon: const Icon(Icons.clear, size: 20),
-                                      onPressed: () {
-                                        setState(() => _dueDate = null);
-                                      },
+                                      onPressed: () =>
+                                          setState(() => _dueDate = null),
                                     )
                                   : null,
                             ),
@@ -584,22 +604,44 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Assigned To
+                        // Assigned To — with clear button so user can reset auto-fill
                         TextFormField(
                           controller: _assignedToController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Assigned To',
                             hintText: 'Enter assignee name',
-                            prefixIcon: Icon(Icons.person),
+                            prefixIcon: const Icon(Icons.person),
+                            // FIX: Show a clear button so user can easily remove
+                            // an incorrectly auto-filled name
+                            suffixIcon: _assignedToController.text.isNotEmpty
+                                ? IconButton(
+                                    icon: const Icon(Icons.clear, size: 18),
+                                    tooltip: 'Clear assignee',
+                                    onPressed: () {
+                                      _assignedToController.clear();
+                                      // FIX: Reset the manual-edit flag so the
+                                      // next classification result can auto-fill again
+                                      setState(() {
+                                        _assignedToManuallyEdited = false;
+                                      });
+                                    },
+                                  )
+                                : null,
                           ),
                           textInputAction: TextInputAction.done,
+                          // FIX: When user taps into the field, mark it as manually edited
+                          onTap: () {
+                            if (_assignedToController.text.isNotEmpty) {
+                              _assignedToManuallyEdited = true;
+                            }
+                          },
                         ),
                         const SizedBox(height: 20),
 
-                        // Status (only for edit)
+                        // Status (edit mode only)
                         if (widget.task != null) ...[
                           DropdownButtonFormField<String>(
-                            initialValue: _status,
+                            value: _status,
                             itemHeight: 59.6,
                             decoration: const InputDecoration(
                               labelText: 'Status',
@@ -628,7 +670,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           const SizedBox(height: 28),
                         ],
 
-                        // Submit Button
+                        // Submit button
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -731,7 +773,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           ),
           const SizedBox(height: 16),
 
-          // Category & Priority
           Row(
             children: [
               Expanded(
@@ -754,7 +795,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             ],
           ),
 
-          // Extracted Entities
           if (classification['extracted_entities'] != null &&
               (classification['extracted_entities'] as Map).isNotEmpty) ...[
             const SizedBox(height: 16),
@@ -776,7 +816,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             ),
           ],
 
-          // Suggested Actions
           if (classification['suggested_actions'] != null &&
               (classification['suggested_actions'] as List).isNotEmpty) ...[
             const SizedBox(height: 16),

@@ -75,7 +75,6 @@ class TaskClassificationService {
     ],
   };
 
-  // Priority keywords mapping
   static const Map<String, List<String>> _priorityKeywords = {
     'high': [
       'urgent',
@@ -102,7 +101,6 @@ class TaskClassificationService {
     ],
   };
 
-  // Suggested actions mapping
   static const Map<String, List<String>> _suggestedActions = {
     'scheduling': [
       'Block calendar',
@@ -145,6 +143,23 @@ class TaskClassificationService {
     ],
   };
 
+  /// Words that should never be treated as person names
+  static const Set<String> _stopWords = {
+    // Articles & pronouns
+    'the', 'a', 'an', 'me', 'us', 'him', 'her', 'them', 'they',
+    'this', 'that', 'these', 'those', 'my', 'our', 'your', 'its',
+    'his', 'their', 'we', 'you', 'it', 'he', 'she',
+    // Common task words that follow trigger keywords
+    'meeting', 'call', 'review', 'budget', 'report', 'team',
+    'today', 'tomorrow', 'monday', 'tuesday', 'wednesday',
+    'thursday', 'friday', 'saturday', 'sunday', 'week', 'month',
+    'all', 'everyone', 'anybody', 'someone', 'anyone',
+    'manager', 'client', 'customer', 'vendor', 'supplier',
+    'department', 'office', 'company', 'staff', 'hr',
+    // Prepositions / conjunctions that can follow trigger words
+    'and', 'or', 'but', 'for', 'on', 'at', 'in', 'of',
+  };
+
   /// Classifies a task based on title and description
   static Map<String, dynamic> classifyTask({
     required String title,
@@ -153,16 +168,11 @@ class TaskClassificationService {
     final combinedText =
         '${title.toLowerCase()} ${description?.toLowerCase() ?? ''}';
 
-    // Detect category
     final category = _detectCategory(combinedText);
-
-    // Detect priority
     final priority = _detectPriority(combinedText);
 
-    // Extract entities
+    // Pass original-case text so name extraction can work properly
     final entities = _extractEntities(title, description);
-
-    // Generate suggested actions
     final actions = _generateSuggestedActions(category, combinedText);
 
     return {
@@ -173,7 +183,6 @@ class TaskClassificationService {
     };
   }
 
-  /// Detects the category based on keyword matching
   static String _detectCategory(String text) {
     int maxScore = 0;
     String detectedCategory = 'general';
@@ -195,27 +204,22 @@ class TaskClassificationService {
     return detectedCategory;
   }
 
-  /// Detects priority based on urgency indicators
   static String _detectPriority(String text) {
-    // Check for high priority keywords
     for (final keyword in _priorityKeywords['high']!) {
       if (text.contains(keyword.toLowerCase())) {
         return 'high';
       }
     }
 
-    // Check for medium priority keywords
     for (final keyword in _priorityKeywords['medium']!) {
       if (text.contains(keyword.toLowerCase())) {
         return 'medium';
       }
     }
 
-    // Default to low priority
     return 'low';
   }
 
-  /// Extracts entities from text (dates, names, locations)
   static Map<String, dynamic> _extractEntities(
     String title,
     String? description,
@@ -223,25 +227,22 @@ class TaskClassificationService {
     final entities = <String, dynamic>{};
     final fullText = '$title ${description ?? ''}';
 
-    // Extract dates and times
     final dates = _extractDates(fullText);
     if (dates.isNotEmpty) {
       entities['dates'] = dates;
     }
 
-    // Extract person names (after keywords like "with", "by", "assign to")
+    // FIX: Pass original-case text for name extraction
     final names = _extractNames(fullText);
     if (names.isNotEmpty) {
       entities['people'] = names;
     }
 
-    // Extract locations
     final locations = _extractLocations(fullText);
     if (locations.isNotEmpty) {
       entities['locations'] = locations;
     }
 
-    // Extract time mentions
     final times = _extractTimes(fullText);
     if (times.isNotEmpty) {
       entities['times'] = times;
@@ -250,7 +251,6 @@ class TaskClassificationService {
     return entities;
   }
 
-  /// Extracts date mentions from text
   static List<String> _extractDates(String text) {
     final dates = <String>[];
     final datePatterns = [
@@ -277,22 +277,53 @@ class TaskClassificationService {
     return dates;
   }
 
-  /// Extracts person names from text
+  /// FIX: Extracts person names with case-insensitive matching + stop word filtering
   static List<String> _extractNames(String text) {
     final names = <String>[];
+
+    // FIX: All patterns are now case-insensitive so "with john" and "with John" both match
     final namePatterns = [
-      RegExp(r'\bwith\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'),
-      RegExp(r'\bby\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'),
-      RegExp(r'\bassign(?:ed)?\s+to\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'),
-      RegExp(r'\bcontact\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'),
-      RegExp(r'\bmeet\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b'),
+      RegExp(r'\bwith\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b', caseSensitive: false),
+      RegExp(r'\bby\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b', caseSensitive: false),
+      RegExp(
+        r'\bassign(?:ed)?\s+to\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\bcontact\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\bmeet(?:ing)?\s+with\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(r'\bfor\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b', caseSensitive: false),
+      RegExp(
+        r'\bnotify\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\bsend\s+(?:to\s+)?([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(
+        r'\binform\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b',
+        caseSensitive: false,
+      ),
+      RegExp(r'\bcall\s+([a-zA-Z]+(?:\s+[a-zA-Z]+)?)\b', caseSensitive: false),
     ];
 
     for (final pattern in namePatterns) {
       final matches = pattern.allMatches(text);
       for (final match in matches) {
         if (match.groupCount > 0 && match.group(1) != null) {
-          names.add(match.group(1)!);
+          final rawName = match.group(1)!.trim();
+
+          // FIX: Skip stop words and overly short strings
+          if (_isValidName(rawName)) {
+            // FIX: Capitalize properly before storing
+            names.add(_capitalizeName(rawName));
+          }
         }
       }
     }
@@ -300,7 +331,36 @@ class TaskClassificationService {
     return names.toSet().toList();
   }
 
-  /// Extracts location mentions from text
+  /// Returns true if the extracted string looks like an actual name
+  static bool _isValidName(String name) {
+    if (name.length < 2) return false;
+
+    final lowerName = name.toLowerCase();
+
+    // Reject if the entire string is a stop word
+    if (_stopWords.contains(lowerName)) return false;
+
+    // Reject if the first word is a stop word (e.g. "with the team" → "the team")
+    final firstWord = lowerName.split(' ').first;
+    if (_stopWords.contains(firstWord)) return false;
+
+    // Reject purely numeric strings
+    if (RegExp(r'^\d+$').hasMatch(name)) return false;
+
+    return true;
+  }
+
+  /// Capitalizes each word of a name: "john doe" → "John Doe"
+  static String _capitalizeName(String name) {
+    return name
+        .split(' ')
+        .map((word) {
+          if (word.isEmpty) return word;
+          return '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}';
+        })
+        .join(' ');
+  }
+
   static List<String> _extractLocations(String text) {
     final locations = <String>[];
     final locationPatterns = [
@@ -325,7 +385,6 @@ class TaskClassificationService {
     return locations.toSet().toList();
   }
 
-  /// Extracts time mentions from text
   static List<String> _extractTimes(String text) {
     final times = <String>[];
     final timePatterns = [
@@ -344,22 +403,18 @@ class TaskClassificationService {
     return times.toSet().toList();
   }
 
-  /// Generates suggested actions based on category
   static List<String> _generateSuggestedActions(String category, String text) {
     final baseActions =
         _suggestedActions[category] ?? _suggestedActions['general']!;
 
-    // Filter and prioritize actions based on context
     final relevantActions = <String>[];
 
     for (final action in baseActions) {
-      // Add action if it's highly relevant or if we don't have enough actions yet
       if (relevantActions.length < 4) {
         relevantActions.add(action);
       }
     }
 
-    // Add context-specific actions
     if (text.contains('budget') && !relevantActions.contains('Check budget')) {
       relevantActions.insert(0, 'Check budget');
     }
@@ -373,7 +428,6 @@ class TaskClassificationService {
     return relevantActions.take(5).toList();
   }
 
-  /// Validates and enhances classification with user overrides
   static Map<String, dynamic> mergeClassification({
     required Map<String, dynamic> autoClassification,
     String? userCategory,
@@ -387,7 +441,6 @@ class TaskClassificationService {
     };
   }
 
-  /// Provides confidence score for classification
   static Map<String, dynamic> classifyWithConfidence({
     required String title,
     String? description,
@@ -396,7 +449,6 @@ class TaskClassificationService {
     final combinedText =
         '${title.toLowerCase()} ${description?.toLowerCase() ?? ''}';
 
-    // Calculate confidence scores
     final categoryConfidence = _calculateCategoryConfidence(
       combinedText,
       classification['category'],
@@ -415,7 +467,6 @@ class TaskClassificationService {
     };
   }
 
-  /// Calculates confidence score for category classification
   static double _calculateCategoryConfidence(String text, String category) {
     if (category == 'general') return 0.5;
 
@@ -431,7 +482,6 @@ class TaskClassificationService {
     return (matchCount / keywords.length).clamp(0.0, 1.0);
   }
 
-  /// Calculates confidence score for priority classification
   static double _calculatePriorityConfidence(String text, String priority) {
     final keywords = _priorityKeywords[priority] ?? [];
 
