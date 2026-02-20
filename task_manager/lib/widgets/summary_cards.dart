@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
 
@@ -19,7 +20,8 @@ class SummaryCards extends ConsumerWidget {
               title: 'Pending',
               count: counts['pending'] ?? 0,
               color: AppTheme.warningColor,
-              icon: Icons.pending_actions,
+              icon:
+                  FontAwesomeIcons.hourglassHalf, // ⏳ waiting / not yet started
             ),
           ),
           const SizedBox(width: 12),
@@ -28,7 +30,7 @@ class SummaryCards extends ConsumerWidget {
               title: 'In Progress',
               count: counts['in_progress'] ?? 0,
               color: AppTheme.infoColor,
-              icon: Icons.sync,
+              icon: FontAwesomeIcons.bolt, // ⚡ active / moving fast
             ),
           ),
           const SizedBox(width: 12),
@@ -37,7 +39,7 @@ class SummaryCards extends ConsumerWidget {
               title: 'Completed',
               count: counts['completed'] ?? 0,
               color: AppTheme.successColor,
-              icon: Icons.check_circle,
+              icon: FontAwesomeIcons.circleCheck, // ✅ done / verified
             ),
           ),
         ],
@@ -86,7 +88,7 @@ class _SummaryCard extends StatelessWidget {
                 color: color.withValues(alpha: .15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: color, size: 24),
+              child: FaIcon(icon, color: color, size: 20),
             ),
             const SizedBox(height: 12),
             Text(

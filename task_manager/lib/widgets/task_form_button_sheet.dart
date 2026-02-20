@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
@@ -27,10 +28,8 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   DateTime? _dueDate;
   Map<String, dynamic>? _autoClassification;
   bool _showAutoClassification = false;
-
-  // FIX: Track whether user has manually edited the assignedTo field
-  // so auto-fill doesn't overwrite intentional user input
   bool _assignedToManuallyEdited = false;
+  bool _isAutoFilling = false;
 
   @override
   void initState() {
@@ -49,8 +48,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       _status = widget.task!.status;
       _dueDate = widget.task!.dueDate;
 
-      // If editing an existing task that already has an assignee,
-      // treat it as manually set so we don't clobber it
       if (widget.task!.assignedTo != null &&
           widget.task!.assignedTo!.isNotEmpty) {
         _assignedToManuallyEdited = true;
@@ -59,8 +56,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
 
     _titleController.addListener(_onTextChanged);
     _descriptionController.addListener(_onTextChanged);
-
-    // FIX: Listen for manual edits to the assignedTo field
     _assignedToController.addListener(_onAssignedToChanged);
   }
 
@@ -75,18 +70,11 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     super.dispose();
   }
 
-  // FIX: Detect if user typed into the field themselves
   void _onAssignedToChanged() {
-    // We set this flag only when the user types, not when we programmatically
-    // update the controller. We distinguish by checking if a classification
-    // is currently running — if not, it's a user edit.
     if (!_isAutoFilling) {
       _assignedToManuallyEdited = true;
     }
   }
-
-  // FIX: Guard flag so _onAssignedToChanged doesn't fire during auto-fill
-  bool _isAutoFilling = false;
 
   void _onTextChanged() {
     if (_titleController.text.trim().length >= 3) {
@@ -111,7 +99,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       final entities =
           classification['extracted_entities'] as Map<String, dynamic>?;
 
-      // Auto-fill due date if not already set
       if (entities != null && _dueDate == null) {
         final dates = entities['dates'] as List?;
         if (dates != null && dates.isNotEmpty) {
@@ -119,14 +106,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         }
       }
 
-      // FIX: Only auto-fill Assigned To if user hasn't typed there themselves
       if (entities != null && !_assignedToManuallyEdited) {
         final people = entities['people'] as List?;
         if (people != null && people.isNotEmpty) {
-          // FIX: Names come back already capitalized from the service,
-          // but we capitalize again here as a safety net
           final name = _capitalizeName(people.first.toString());
-
           _isAutoFilling = true;
           _assignedToController.text = name;
           _isAutoFilling = false;
@@ -135,7 +118,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     });
   }
 
-  /// Capitalizes each word: "john doe" → "John Doe"
   String _capitalizeName(String name) {
     return name
         .split(' ')
@@ -168,31 +150,29 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
       return DateTime(now.year, now.month + 1, now.day);
     }
 
+    final monthMap = {
+      'jan': 1,
+      'feb': 2,
+      'mar': 3,
+      'apr': 4,
+      'may': 5,
+      'jun': 6,
+      'jul': 7,
+      'aug': 8,
+      'sep': 9,
+      'oct': 10,
+      'nov': 11,
+      'dec': 12,
+    };
+
     final monthDayPattern = RegExp(
       r'(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\s+(\d{1,2})',
       caseSensitive: false,
     );
     final monthDayMatch = monthDayPattern.firstMatch(text);
     if (monthDayMatch != null) {
-      final monthStr = monthDayMatch.group(1)!.toLowerCase();
+      final month = monthMap[monthDayMatch.group(1)!.substring(0, 3)];
       final day = int.parse(monthDayMatch.group(2)!);
-
-      final monthMap = {
-        'jan': 1,
-        'feb': 2,
-        'mar': 3,
-        'apr': 4,
-        'may': 5,
-        'jun': 6,
-        'jul': 7,
-        'aug': 8,
-        'sep': 9,
-        'oct': 10,
-        'nov': 11,
-        'dec': 12,
-      };
-
-      final month = monthMap[monthStr.substring(0, 3)];
       if (month != null) {
         var year = now.year;
         final possibleDate = DateTime(year, month, day);
@@ -207,26 +187,9 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     );
     final fullMatch = fullDatePattern.firstMatch(text);
     if (fullMatch != null) {
-      final monthStr = fullMatch.group(1)!.toLowerCase();
+      final month = monthMap[fullMatch.group(1)!.substring(0, 3)];
       final day = int.parse(fullMatch.group(2)!);
       final year = int.parse(fullMatch.group(3)!);
-
-      final monthMap = {
-        'jan': 1,
-        'feb': 2,
-        'mar': 3,
-        'apr': 4,
-        'may': 5,
-        'jun': 6,
-        'jul': 7,
-        'aug': 8,
-        'sep': 9,
-        'oct': 10,
-        'nov': 11,
-        'dec': 12,
-      };
-
-      final month = monthMap[monthStr.substring(0, 3)];
       if (month != null) return DateTime(year, month, day);
     }
 
@@ -294,7 +257,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           extractedEntities,
         );
       }
-
       final suggestedActions = _autoClassification!['suggested_actions'];
       if (suggestedActions != null && suggestedActions is List) {
         taskData['suggested_actions'] = List<String>.from(
@@ -309,11 +271,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('Task created successfully'),
+                  const FaIcon(
+                    FontAwesomeIcons.circleCheck,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Task created successfully'),
                 ],
               ),
               backgroundColor: AppTheme.successColor,
@@ -329,11 +295,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Row(
+              content: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text('Task updated successfully'),
+                  const FaIcon(
+                    FontAwesomeIcons.circleCheck,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 12),
+                  const Text('Task updated successfully'),
                 ],
               ),
               backgroundColor: AppTheme.successColor,
@@ -349,7 +319,11 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
           SnackBar(
             content: Row(
               children: [
-                const Icon(Icons.error, color: Colors.white),
+                const FaIcon(
+                  FontAwesomeIcons.circleXmark,
+                  color: Colors.white,
+                  size: 16,
+                ),
                 const SizedBox(width: 12),
                 Expanded(child: Text('Error: ${e.toString()}')),
               ],
@@ -382,7 +356,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
         builder: (context, scrollController) {
           return Column(
             children: [
-              // Handle bar
+              // Drag handle
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 width: 40,
@@ -406,10 +380,13 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         color: AppTheme.primaryColor.withValues(alpha: .1),
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      child: Icon(
-                        widget.task == null ? Icons.add_task : Icons.edit,
+                      child: FaIcon(
+                        // clipboardList = new task form; penToSquare = editing
+                        widget.task == null
+                            ? FontAwesomeIcons.clipboardList
+                            : FontAwesomeIcons.penToSquare,
                         color: AppTheme.primaryColor,
-                        size: 24,
+                        size: 20,
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -420,7 +397,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: const FaIcon(FontAwesomeIcons.xmark, size: 18),
                       onPressed: () => Navigator.pop(context),
                       style: IconButton.styleFrom(
                         backgroundColor: isDark
@@ -452,13 +429,26 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Title
+                        // ── Title ──
                         TextFormField(
                           controller: _titleController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Title',
                             hintText: 'Enter task title',
-                            prefixIcon: Icon(Icons.title),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons
+                                    .penNib, // pen nib = title/heading
+                                size: 16,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -474,13 +464,26 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Description
+                        // ── Description ──
                         TextFormField(
                           controller: _descriptionController,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Description',
                             hintText: 'Enter task description',
-                            prefixIcon: Icon(Icons.description),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons
+                                    .alignLeft, // paragraph lines = body text
+                                size: 16,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
                             alignLabelWithHint: true,
                           ),
                           maxLines: 4,
@@ -494,7 +497,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Auto-Classification preview
+                        // ── Auto-Classification card ──
                         if (_showAutoClassification &&
                             _autoClassification != null) ...[
                           _buildAutoClassificationCard(isDark),
@@ -510,13 +513,26 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 12),
 
-                        // Category dropdown
+                        // ── Category ──
                         DropdownButtonFormField<String>(
-                          value: _category,
+                          initialValue: _category,
                           itemHeight: 59.6,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Category',
-                            prefixIcon: Icon(Icons.category, size: 20),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons
+                                    .layerGroup, // stacked layers = grouping
+                                size: 16,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
                           ),
                           items: const [
                             DropdownMenuItem(
@@ -545,13 +561,26 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Priority dropdown
+                        // ── Priority ──
                         DropdownButtonFormField<String>(
-                          value: _priority,
+                          initialValue: _priority,
                           itemHeight: 59.6,
-                          decoration: const InputDecoration(
+                          decoration: InputDecoration(
                             labelText: 'Priority',
-                            prefixIcon: Icon(Icons.flag, size: 20),
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons
+                                    .arrowUpWideShort, // sorted arrows = priority rank
+                                size: 16,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
                           ),
                           items: const [
                             DropdownMenuItem(
@@ -569,7 +598,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Due date picker
+                        // ── Due Date ──
                         InkWell(
                           onTap: _selectDate,
                           borderRadius: BorderRadius.circular(12),
@@ -577,10 +606,26 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                             decoration: InputDecoration(
                               labelText: 'Due Date',
                               hintText: 'Select date',
-                              prefixIcon: const Icon(Icons.calendar_today),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 13,
+                                  vertical: 13,
+                                ),
+                                child: FaIcon(
+                                  FontAwesomeIcons
+                                      .calendarDays, // calendar with day grid
+                                  size: 16,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
                               suffixIcon: _dueDate != null
                                   ? IconButton(
-                                      icon: const Icon(Icons.clear, size: 20),
+                                      icon: const FaIcon(
+                                        FontAwesomeIcons.xmark,
+                                        size: 14,
+                                      ),
                                       onPressed: () =>
                                           setState(() => _dueDate = null),
                                     )
@@ -604,23 +649,35 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Assigned To — with clear button so user can reset auto-fill
+                        // ── Assigned To ──
                         TextFormField(
                           controller: _assignedToController,
                           decoration: InputDecoration(
                             labelText: 'Assigned To',
                             hintText: 'Enter assignee name',
-                            prefixIcon: const Icon(Icons.person),
-                            // FIX: Show a clear button so user can easily remove
-                            // an incorrectly auto-filled name
+                            prefixIcon: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 13,
+                                vertical: 13,
+                              ),
+                              child: FaIcon(
+                                FontAwesomeIcons
+                                    .userTie, // person with tie = assignee role
+                                size: 16,
+                                color: isDark
+                                    ? AppTheme.darkTextSecondary
+                                    : AppTheme.lightTextSecondary,
+                              ),
+                            ),
                             suffixIcon: _assignedToController.text.isNotEmpty
                                 ? IconButton(
-                                    icon: const Icon(Icons.clear, size: 18),
+                                    icon: const FaIcon(
+                                      FontAwesomeIcons.xmark,
+                                      size: 14,
+                                    ),
                                     tooltip: 'Clear assignee',
                                     onPressed: () {
                                       _assignedToController.clear();
-                                      // FIX: Reset the manual-edit flag so the
-                                      // next classification result can auto-fill again
                                       setState(() {
                                         _assignedToManuallyEdited = false;
                                       });
@@ -629,7 +686,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                                 : null,
                           ),
                           textInputAction: TextInputAction.done,
-                          // FIX: When user taps into the field, mark it as manually edited
                           onTap: () {
                             if (_assignedToController.text.isNotEmpty) {
                               _assignedToManuallyEdited = true;
@@ -638,14 +694,27 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                         ),
                         const SizedBox(height: 20),
 
-                        // Status (edit mode only)
+                        // ── Status (edit mode only) ──
                         if (widget.task != null) ...[
                           DropdownButtonFormField<String>(
-                            value: _status,
+                            initialValue: _status,
                             itemHeight: 59.6,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Status',
-                              prefixIcon: Icon(Icons.sync_alt),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 13,
+                                  vertical: 13,
+                                ),
+                                child: FaIcon(
+                                  FontAwesomeIcons
+                                      .circleHalfStroke, // half circle = status
+                                  size: 16,
+                                  color: isDark
+                                      ? AppTheme.darkTextSecondary
+                                      : AppTheme.lightTextSecondary,
+                                ),
+                              ),
                             ),
                             items: const [
                               DropdownMenuItem(
@@ -670,7 +739,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                           const SizedBox(height: 28),
                         ],
 
-                        // Submit button
+                        // ── Submit ──
                         SizedBox(
                           width: double.infinity,
                           height: 54,
@@ -690,8 +759,14 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                                 : Row(
                                     mainAxisAlignment: MainAxisAlignment.center,
                                     children: [
-                                      const Icon(Icons.check, size: 20),
-                                      const SizedBox(width: 8),
+                                      FaIcon(
+                                        // floppyDisk = save/create; penToSquare = edit/update
+                                        widget.task == null
+                                            ? FontAwesomeIcons.floppyDisk
+                                            : FontAwesomeIcons.penToSquare,
+                                        size: 16,
+                                      ),
+                                      const SizedBox(width: 10),
                                       Text(
                                         widget.task == null
                                             ? 'Create Task'
@@ -735,9 +810,10 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                   color: AppTheme.infoColor.withValues(alpha: .1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(
-                  Icons.auto_awesome,
-                  size: 20,
+                child: FaIcon(
+                  FontAwesomeIcons
+                      .wandMagicSparkles, // magic wand = AI auto-classify
+                  size: 16,
                   color: AppTheme.infoColor,
                 ),
               ),
@@ -777,7 +853,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             children: [
               Expanded(
                 child: _buildInfoRow(
-                  Icons.category,
+                  FontAwesomeIcons.layerGroup,
                   'Category',
                   classification['category'] as String,
                   isDark,
@@ -786,7 +862,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
               const SizedBox(width: 16),
               Expanded(
                 child: _buildInfoRow(
-                  Icons.flag,
+                  FontAwesomeIcons.arrowUpWideShort,
                   'Priority',
                   classification['priority'] as String,
                   isDark,
@@ -834,39 +910,40 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: (classification['suggested_actions'] as List)
-                  .map(
-                    (action) => Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
+              children: (classification['suggested_actions'] as List).map((
+                action,
+              ) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.infoColor.withValues(alpha: .1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      FaIcon(
+                        FontAwesomeIcons
+                            .squareCheck, // checked box = actionable item
+                        size: 12,
+                        color: AppTheme.infoColor,
                       ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.infoColor.withValues(alpha: .1),
-                        borderRadius: BorderRadius.circular(8),
+                      const SizedBox(width: 7),
+                      Text(
+                        action.toString(),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppTheme.infoColor,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.check_circle_outline,
-                            size: 14,
-                            color: AppTheme.infoColor,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            action.toString(),
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.infoColor,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                  .toList(),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
           ],
         ],
@@ -877,7 +954,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   Widget _buildInfoRow(IconData icon, String label, String value, bool isDark) {
     return Row(
       children: [
-        Icon(icon, size: 16, color: AppTheme.infoColor),
+        FaIcon(icon, size: 14, color: AppTheme.infoColor),
         const SizedBox(width: 8),
         Expanded(
           child: Column(
@@ -918,7 +995,11 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(_getEntityIcon(key), size: 14, color: AppTheme.infoColor),
+                FaIcon(
+                  _getEntityIcon(key),
+                  size: 13,
+                  color: AppTheme.infoColor,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Wrap(
@@ -961,15 +1042,15 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   IconData _getEntityIcon(String entityType) {
     switch (entityType) {
       case 'dates':
-        return Icons.calendar_today;
+        return FontAwesomeIcons.calendarDays; // calendar grid = dates
       case 'times':
-        return Icons.access_time;
+        return FontAwesomeIcons.clock; // classic clock face = time
       case 'people':
-        return Icons.person;
+        return FontAwesomeIcons.userTag; // person with tag = named person
       case 'locations':
-        return Icons.location_on;
+        return FontAwesomeIcons.locationDot; // pin drop = place
       default:
-        return Icons.info_outline;
+        return FontAwesomeIcons.tag; // generic tag
     }
   }
 }

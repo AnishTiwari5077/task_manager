@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:task_manager/providers/task_provider.dart';
 
 class FilterDialog extends ConsumerWidget {
@@ -15,84 +16,121 @@ class FilterDialog extends ConsumerWidget {
     return AlertDialog(
       backgroundColor: colorScheme.surface,
       surfaceTintColor: colorScheme.surface,
-      title: Text('Filter Tasks', style: theme.textTheme.titleLarge),
+      title: Row(
+        children: [
+          FaIcon(
+            FontAwesomeIcons.sliders, // sliders = filter controls
+            size: 18,
+            color: colorScheme.primary,
+          ),
+          const SizedBox(width: 10),
+          Text('Filter Tasks', style: theme.textTheme.titleLarge),
+        ],
+      ),
       content: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Status', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
+            // ── Status section ──
+            Row(
+              children: [
+                FaIcon(
+                  FontAwesomeIcons
+                      .circleHalfStroke, // half-filled circle = status
+                  size: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 7),
+                Text('Status', style: theme.textTheme.titleSmall),
+              ],
+            ),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 _chip(
                   context: context,
                   label: 'Pending',
+                  icon: FontAwesomeIcons.hourglassHalf, // waiting
                   selected: statusFilter == 'pending',
-                  onSelected: (selected) {
-                    ref.read(statusFilterProvider.notifier).state = selected
-                        ? 'pending'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(statusFilterProvider.notifier).state = s
+                      ? 'pending'
+                      : null,
                 ),
                 _chip(
                   context: context,
                   label: 'In Progress',
+                  icon: FontAwesomeIcons.bolt, // active
                   selected: statusFilter == 'in_progress',
-                  onSelected: (selected) {
-                    ref.read(statusFilterProvider.notifier).state = selected
-                        ? 'in_progress'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(statusFilterProvider.notifier).state = s
+                      ? 'in_progress'
+                      : null,
                 ),
                 _chip(
                   context: context,
                   label: 'Completed',
+                  icon: FontAwesomeIcons.circleCheck, // done
                   selected: statusFilter == 'completed',
-                  onSelected: (selected) {
-                    ref.read(statusFilterProvider.notifier).state = selected
-                        ? 'completed'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(statusFilterProvider.notifier).state = s
+                      ? 'completed'
+                      : null,
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-            Text('Priority', style: theme.textTheme.titleSmall),
-            const SizedBox(height: 8),
+
+            const SizedBox(height: 22),
+
+            // ── Priority section ──
+            Row(
+              children: [
+                FaIcon(
+                  FontAwesomeIcons.arrowUpWideShort, // sorted arrows = priority
+                  size: 13,
+                  color: colorScheme.onSurfaceVariant,
+                ),
+                const SizedBox(width: 7),
+                Text('Priority', style: theme.textTheme.titleSmall),
+              ],
+            ),
+            const SizedBox(height: 10),
             Wrap(
               spacing: 8,
+              runSpacing: 8,
               children: [
                 _chip(
                   context: context,
                   label: 'High',
+                  icon: FontAwesomeIcons.anglesUp, // ▲▲ urgent
                   selected: priorityFilter == 'high',
-                  onSelected: (selected) {
-                    ref.read(priorityFilterProvider.notifier).state = selected
-                        ? 'high'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(priorityFilterProvider.notifier).state = s
+                      ? 'high'
+                      : null,
                 ),
                 _chip(
                   context: context,
                   label: 'Medium',
+                  icon: FontAwesomeIcons.equals, // = balanced
                   selected: priorityFilter == 'medium',
-                  onSelected: (selected) {
-                    ref.read(priorityFilterProvider.notifier).state = selected
-                        ? 'medium'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(priorityFilterProvider.notifier).state = s
+                      ? 'medium'
+                      : null,
                 ),
                 _chip(
                   context: context,
                   label: 'Low',
+                  icon: FontAwesomeIcons.anglesDown, // ▼▼ low urgency
                   selected: priorityFilter == 'low',
-                  onSelected: (selected) {
-                    ref.read(priorityFilterProvider.notifier).state = selected
-                        ? 'low'
-                        : null;
-                  },
+                  onSelected: (s) =>
+                      ref.read(priorityFilterProvider.notifier).state = s
+                      ? 'low'
+                      : null,
                 ),
               ],
             ),
@@ -100,18 +138,26 @@ class FilterDialog extends ConsumerWidget {
         ),
       ),
       actions: [
-        TextButton(
+        TextButton.icon(
           onPressed: () {
             ref.read(statusFilterProvider.notifier).state = null;
             ref.read(categoryFilterProvider.notifier).state = null;
             ref.read(priorityFilterProvider.notifier).state = null;
             Navigator.pop(context);
           },
-          child: const Text('Clear All'),
+          icon: const FaIcon(
+            FontAwesomeIcons.filterCircleXmark, // filter with X = clear
+            size: 14,
+          ),
+          label: const Text('Clear All'),
         ),
-        ElevatedButton(
+        ElevatedButton.icon(
           onPressed: () => Navigator.pop(context),
-          child: const Text('Apply'),
+          icon: const FaIcon(
+            FontAwesomeIcons.check,
+            size: 13,
+          ), // checkmark = apply
+          label: const Text('Apply'),
         ),
       ],
     );
@@ -120,6 +166,7 @@ class FilterDialog extends ConsumerWidget {
   Widget _chip({
     required BuildContext context,
     required String label,
+    required IconData icon,
     required bool selected,
     required ValueChanged<bool> onSelected,
   }) {
@@ -127,6 +174,11 @@ class FilterDialog extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
 
     return FilterChip(
+      avatar: FaIcon(
+        icon,
+        size: 12,
+        color: selected ? colorScheme.primary : colorScheme.onSurfaceVariant,
+      ),
       label: Text(
         label,
         style: theme.textTheme.labelMedium?.copyWith(

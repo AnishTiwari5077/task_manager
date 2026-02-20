@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
 
@@ -30,11 +31,10 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'All',
-            icon: Icons.grid_view,
+            icon: FontAwesomeIcons.tableCells, // grid = all categories
             isSelected: categoryFilter == null,
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = null;
-            },
+            onSelected: (_) =>
+                ref.read(categoryFilterProvider.notifier).state = null,
             color: AppTheme.primaryColor,
           ),
           const SizedBox(width: 8),
@@ -42,13 +42,13 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'Scheduling',
-            icon: Icons.schedule,
+            icon: FontAwesomeIcons
+                .calendarCheck, // calendar with check = booked event
             isSelected: categoryFilter == 'scheduling',
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = selected
-                  ? 'scheduling'
-                  : null;
-            },
+            onSelected: (selected) =>
+                ref.read(categoryFilterProvider.notifier).state = selected
+                ? 'scheduling'
+                : null,
             color: const Color(0xFF3B82F6),
           ),
           const SizedBox(width: 8),
@@ -56,13 +56,12 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'Finance',
-            icon: Icons.attach_money,
+            icon: FontAwesomeIcons.sackDollar, // money sack = finance
             isSelected: categoryFilter == 'finance',
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = selected
-                  ? 'finance'
-                  : null;
-            },
+            onSelected: (selected) =>
+                ref.read(categoryFilterProvider.notifier).state = selected
+                ? 'finance'
+                : null,
             color: AppTheme.successColor,
           ),
           const SizedBox(width: 8),
@@ -70,13 +69,13 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'Technical',
-            icon: Icons.build,
+            icon:
+                FontAwesomeIcons.microchip, // microchip = technical/engineering
             isSelected: categoryFilter == 'technical',
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = selected
-                  ? 'technical'
-                  : null;
-            },
+            onSelected: (selected) =>
+                ref.read(categoryFilterProvider.notifier).state = selected
+                ? 'technical'
+                : null,
             color: AppTheme.secondaryColor,
           ),
           const SizedBox(width: 8),
@@ -84,13 +83,12 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'Safety',
-            icon: Icons.security,
+            icon: FontAwesomeIcons.shieldHalved, // shield = protection / safety
             isSelected: categoryFilter == 'safety',
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = selected
-                  ? 'safety'
-                  : null;
-            },
+            onSelected: (selected) =>
+                ref.read(categoryFilterProvider.notifier).state = selected
+                ? 'safety'
+                : null,
             color: AppTheme.errorColor,
           ),
           const SizedBox(width: 8),
@@ -98,13 +96,12 @@ class FilterChips extends ConsumerWidget {
             context: context,
             ref: ref,
             label: 'General',
-            icon: Icons.label,
+            icon: FontAwesomeIcons.layerGroup, // stacked layers = general/misc
             isSelected: categoryFilter == 'general',
-            onSelected: (selected) {
-              ref.read(categoryFilterProvider.notifier).state = selected
-                  ? 'general'
-                  : null;
-            },
+            onSelected: (selected) =>
+                ref.read(categoryFilterProvider.notifier).state = selected
+                ? 'general'
+                : null,
             color: const Color(0xFF64748B),
           ),
         ],
@@ -122,21 +119,16 @@ class FilterChips extends ConsumerWidget {
     required Color color,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final iconColor = isSelected
+        ? color
+        : (isDark ? AppTheme.darkTextSecondary : AppTheme.lightTextSecondary);
 
     return FilterChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icon,
-            size: 16,
-            color: isSelected
-                ? color
-                : (isDark
-                      ? AppTheme.darkTextSecondary
-                      : AppTheme.lightTextSecondary),
-          ),
-          const SizedBox(width: 6),
+          FaIcon(icon, size: 13, color: iconColor),
+          const SizedBox(width: 7),
           Text(
             label,
             style: TextStyle(

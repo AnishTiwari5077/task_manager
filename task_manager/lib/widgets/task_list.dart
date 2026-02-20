@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:task_manager/config/theme.dart';
 import 'package:task_manager/providers/task_provider.dart';
@@ -33,7 +34,7 @@ class TaskCard extends ConsumerWidget {
   Color _getCategoryColor(String category) {
     switch (category) {
       case 'scheduling':
-        return const Color(0xFF3B82F6); // Blue
+        return const Color(0xFF3B82F6);
       case 'finance':
         return AppTheme.successColor;
       case 'technical':
@@ -41,7 +42,23 @@ class TaskCard extends ConsumerWidget {
       case 'safety':
         return AppTheme.errorColor;
       default:
-        return const Color(0xFF64748B); // Slate
+        return const Color(0xFF64748B);
+    }
+  }
+
+  /// FA icons chosen for semantic accuracy and visual distinctiveness
+  IconData _getCategoryIcon(String category) {
+    switch (category) {
+      case 'scheduling':
+        return FontAwesomeIcons.calendarCheck; // booked appointment
+      case 'finance':
+        return FontAwesomeIcons.sackDollar; // money / budget
+      case 'technical':
+        return FontAwesomeIcons.microchip; // hardware/software engineering
+      case 'safety':
+        return FontAwesomeIcons.shieldHalved; // protection / safety
+      default:
+        return FontAwesomeIcons.layerGroup; // stacked = general/misc
     }
   }
 
@@ -56,14 +73,26 @@ class TaskCard extends ConsumerWidget {
     }
   }
 
+  /// Arrows communicate urgency level at a glance without reading text
+  IconData _getPriorityIcon(String priority) {
+    switch (priority) {
+      case 'high':
+        return FontAwesomeIcons.anglesUp; // ▲▲ urgent
+      case 'medium':
+        return FontAwesomeIcons.equals; // = balanced
+      default:
+        return FontAwesomeIcons.anglesDown; // ▼▼ low
+    }
+  }
+
   IconData _getStatusIcon(String status) {
     switch (status) {
       case 'completed':
-        return Icons.check_circle;
+        return FontAwesomeIcons.circleCheck; // done / verified
       case 'in_progress':
-        return Icons.sync;
+        return FontAwesomeIcons.bolt; // active / fast
       default:
-        return Icons.pending_actions;
+        return FontAwesomeIcons.hourglassHalf; // waiting
     }
   }
 
@@ -78,6 +107,21 @@ class TaskCard extends ConsumerWidget {
     }
   }
 
+  IconData _getEntityIcon(String entityType) {
+    switch (entityType) {
+      case 'dates':
+        return FontAwesomeIcons.calendarDays; // multi-day calendar
+      case 'times':
+        return FontAwesomeIcons.clock; // classic clock
+      case 'people':
+        return FontAwesomeIcons.userTag; // person with label = assignee
+      case 'locations':
+        return FontAwesomeIcons.locationDot; // pin drop
+      default:
+        return FontAwesomeIcons.tag; // generic tag
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final categoryColor = _getCategoryColor(task.category);
@@ -85,7 +129,6 @@ class TaskCard extends ConsumerWidget {
     final statusColor = _getStatusColor(task.status);
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    // Check if task has classification data
     final hasEntities =
         task.extractedEntities != null && task.extractedEntities!.isNotEmpty;
     final hasActions =
@@ -101,12 +144,13 @@ class TaskCard extends ConsumerWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // ── Top row: category · priority · status · menu ──
               Row(
                 children: [
-                  // Category Chip
+                  // Category chip
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
+                      horizontal: 10,
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
@@ -117,18 +161,29 @@ class TaskCard extends ConsumerWidget {
                         width: 1,
                       ),
                     ),
-                    child: Text(
-                      task.category.toUpperCase(),
-                      style: TextStyle(
-                        color: categoryColor,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.5,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        FaIcon(
+                          _getCategoryIcon(task.category),
+                          size: 11,
+                          color: categoryColor,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          task.category.toUpperCase(),
+                          style: TextStyle(
+                            color: categoryColor,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 8),
-                  // Priority Badge
+                  // Priority badge
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -141,8 +196,12 @@ class TaskCard extends ConsumerWidget {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.flag, size: 12, color: priorityColor),
-                        const SizedBox(width: 4),
+                        FaIcon(
+                          _getPriorityIcon(task.priority),
+                          size: 11,
+                          color: priorityColor,
+                        ),
+                        const SizedBox(width: 5),
                         Text(
                           task.priority.toUpperCase(),
                           style: TextStyle(
@@ -156,25 +215,25 @@ class TaskCard extends ConsumerWidget {
                     ),
                   ),
                   const Spacer(),
-                  // Status Indicator
+                  // Status indicator
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(7),
                     decoration: BoxDecoration(
                       color: statusColor.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Icon(
+                    child: FaIcon(
                       _getStatusIcon(task.status),
                       color: statusColor,
-                      size: 18,
+                      size: 15,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // More Menu
+                  // Overflow menu
                   PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 20,
+                    icon: FaIcon(
+                      FontAwesomeIcons.ellipsis, // horizontal 3-dots
+                      size: 18,
                       color: isDark
                           ? AppTheme.darkTextSecondary
                           : AppTheme.lightTextSecondary,
@@ -187,15 +246,19 @@ class TaskCard extends ConsumerWidget {
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
-                            title: const Row(
+                            title: Row(
                               children: [
-                                Icon(Icons.delete, color: AppTheme.errorColor),
-                                SizedBox(width: 12),
-                                Text('Delete Task'),
+                                FaIcon(
+                                  FontAwesomeIcons.triangleExclamation,
+                                  color: AppTheme.errorColor,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                const Text('Delete Task'),
                               ],
                             ),
                             content: const Text(
-                              'Are you sure you want to delete this tasks? This action cannot be undone.',
+                              'Are you sure you want to delete this task? This action cannot be undone.',
                             ),
                             actions: [
                               TextButton(
@@ -219,14 +282,15 @@ class TaskCard extends ConsumerWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                content: const Row(
+                                content: Row(
                                   children: [
-                                    Icon(
-                                      Icons.check_circle,
+                                    const FaIcon(
+                                      FontAwesomeIcons.circleCheck,
                                       color: Colors.white,
+                                      size: 16,
                                     ),
-                                    SizedBox(width: 12),
-                                    Text('Task deleted successfully'),
+                                    const SizedBox(width: 12),
+                                    const Text('Task deleted successfully'),
                                   ],
                                 ),
                                 backgroundColor: AppTheme.successColor,
@@ -246,44 +310,44 @@ class TaskCard extends ConsumerWidget {
                       }
                     },
                     itemBuilder: (context) => [
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'in_progress',
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.sync,
-                              size: 18,
+                            FaIcon(
+                              FontAwesomeIcons.bolt,
+                              size: 15,
                               color: AppTheme.infoColor,
                             ),
-                            SizedBox(width: 12),
-                            Text('Mark In Progress'),
+                            const SizedBox(width: 12),
+                            const Text('Mark In Progress'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'complete',
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 18,
+                            FaIcon(
+                              FontAwesomeIcons.circleCheck,
+                              size: 15,
                               color: AppTheme.successColor,
                             ),
-                            SizedBox(width: 12),
-                            Text('Mark Complete'),
+                            const SizedBox(width: 12),
+                            const Text('Mark Complete'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
+                      PopupMenuItem(
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(
-                              Icons.delete,
-                              size: 18,
+                            FaIcon(
+                              FontAwesomeIcons.trashCan,
+                              size: 15,
                               color: AppTheme.errorColor,
                             ),
-                            SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             Text(
                               'Delete',
                               style: TextStyle(color: AppTheme.errorColor),
@@ -295,7 +359,9 @@ class TaskCard extends ConsumerWidget {
                   ),
                 ],
               ),
+
               const SizedBox(height: 14),
+
               // Title
               Text(
                 task.title,
@@ -308,6 +374,7 @@ class TaskCard extends ConsumerWidget {
                   height: 1.4,
                 ),
               ),
+
               if (task.description != null && task.description!.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
@@ -323,6 +390,7 @@ class TaskCard extends ConsumerWidget {
                 ),
               ],
 
+              // Entity chips
               if (hasEntities) ...[
                 const SizedBox(height: 12),
                 Wrap(
@@ -332,13 +400,15 @@ class TaskCard extends ConsumerWidget {
                 ),
               ],
 
+              // Suggested actions hint
               if (hasActions) ...[
                 const SizedBox(height: 10),
                 Row(
                   children: [
-                    Icon(
-                      Icons.lightbulb_outline,
-                      size: 14,
+                    FaIcon(
+                      FontAwesomeIcons
+                          .wandMagicSparkles, // magic wand = AI suggestions
+                      size: 12,
                       color: isDark
                           ? AppTheme.darkTextSecondary
                           : AppTheme.lightTextSecondary,
@@ -362,82 +432,24 @@ class TaskCard extends ConsumerWidget {
               ],
 
               const SizedBox(height: 14),
-              // Footer Info
+
+              // Footer: due date + assignee
               Wrap(
                 spacing: 16,
                 runSpacing: 8,
                 children: [
                   if (task.dueDate != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppTheme.darkSurface
-                            : AppTheme.lightBackground,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark
-                              ? AppTheme.darkBorder
-                              : AppTheme.lightBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.calendar_today,
-                            size: 14,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            DateFormat('MMM dd, yyyy').format(task.dueDate!),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
+                    _FooterChip(
+                      icon: FontAwesomeIcons.calendarDays, // date
+                      label: DateFormat('MMM dd, yyyy').format(task.dueDate!),
+                      isDark: isDark,
                     ),
                   if (task.assignedTo != null)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? AppTheme.darkSurface
-                            : AppTheme.lightBackground,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isDark
-                              ? AppTheme.darkBorder
-                              : AppTheme.lightBorder,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            Icons.person,
-                            size: 14,
-                            color: isDark
-                                ? AppTheme.darkTextSecondary
-                                : AppTheme.lightTextSecondary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            task.assignedTo!,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                        ],
-                      ),
+                    _FooterChip(
+                      icon: FontAwesomeIcons
+                          .userTie, // person with tie = assignee
+                      label: task.assignedTo!,
+                      isDark: isDark,
                     ),
                 ],
               ),
@@ -450,10 +462,8 @@ class TaskCard extends ConsumerWidget {
 
   List<Widget> _buildEntityChips(Map<String, dynamic> entities, bool isDark) {
     final chips = <Widget>[];
-
     entities.forEach((key, value) {
       if (value is List && value.isNotEmpty) {
-        // Take only first 2 items from each entity type
         for (final item in value.take(2)) {
           chips.add(
             Container(
@@ -468,12 +478,12 @@ class TaskCard extends ConsumerWidget {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(
+                  FaIcon(
                     _getEntityIcon(key),
-                    size: 10,
+                    size: 9,
                     color: AppTheme.infoColor,
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: 5),
                   Text(
                     item.toString(),
                     style: TextStyle(
@@ -489,22 +499,51 @@ class TaskCard extends ConsumerWidget {
         }
       }
     });
-
     return chips;
   }
+}
 
-  IconData _getEntityIcon(String entityType) {
-    switch (entityType) {
-      case 'dates':
-        return Icons.calendar_today;
-      case 'times':
-        return Icons.access_time;
-      case 'people':
-        return Icons.person;
-      case 'locations':
-        return Icons.location_on;
-      default:
-        return Icons.info_outline;
-    }
+class _FooterChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isDark;
+
+  const _FooterChip({
+    required this.icon,
+    required this.label,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.darkSurface : AppTheme.lightBackground,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? AppTheme.darkBorder : AppTheme.lightBorder,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FaIcon(
+            icon,
+            size: 12,
+            color: isDark
+                ? AppTheme.darkTextSecondary
+                : AppTheme.lightTextSecondary,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
   }
 }
