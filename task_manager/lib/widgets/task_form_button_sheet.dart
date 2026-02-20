@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
@@ -21,6 +23,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
   late TextEditingController _assignedToController;
+  Timer? _debounceTimer;
 
   String? _category;
   String? _priority;
@@ -67,6 +70,7 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
     _titleController.dispose();
     _descriptionController.dispose();
     _assignedToController.dispose();
+    _debounceTimer?.cancel();
     super.dispose();
   }
 
@@ -77,9 +81,12 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
   }
 
   void _onTextChanged() {
-    if (_titleController.text.trim().length >= 3) {
-      _performAutoClassification();
-    }
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () {
+      if (_titleController.text.trim().length >= 3) {
+        _performAutoClassification();
+      }
+    });
   }
 
   void _performAutoClassification() {
@@ -790,7 +797,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
 
   Widget _buildAutoClassificationCard(bool isDark) {
     final classification = _autoClassification!;
-    final confidence = classification['confidence'] as Map<String, dynamic>?;
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -826,25 +832,6 @@ class _TaskFormBottomSheetState extends ConsumerState<TaskFormBottomSheet> {
                   ),
                 ),
               ),
-              if (confidence != null)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppTheme.successColor.withValues(alpha: .1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    '${((confidence['category'] as double) * 100).toInt()}% confident',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.successColor,
-                    ),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 16),

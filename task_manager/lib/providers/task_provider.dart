@@ -123,7 +123,7 @@ class ClassificationNotifier extends StateNotifier<ClassificationState> {
     state = state.copyWith(isClassifying: true, error: null);
 
     try {
-      final classification = TaskClassificationService.classifyWithConfidence(
+      final classification = TaskClassificationService.classifyTask(
         title: title,
         description: description,
       );
@@ -143,7 +143,6 @@ class ClassificationNotifier extends StateNotifier<ClassificationState> {
         'priority': 'low',
         'extracted_entities': {},
         'suggested_actions': [],
-        'confidence': {'category': 0.5, 'priority': 0.5},
       };
     }
   }
