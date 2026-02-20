@@ -111,7 +111,7 @@ function extractEntities(text) {
   return entities;
 }
 
-// ✅ FIXED: Updated validation schemas to include classification fields
+
 const taskSchema = Joi.object({
   title: Joi.string().required().min(3).max(200),
   description: Joi.string().allow('', null),
@@ -136,7 +136,6 @@ const updateTaskSchema = Joi.object({
   status: Joi.string().valid('pending', 'in_progress', 'completed'),
   assigned_to: Joi.string().allow('', null),
   due_date: Joi.date().iso().allow(null),
-  // ✅ NEW: Allow classification fields in updates too
   extracted_entities: Joi.object().pattern(
     Joi.string(),
     Joi.array().items(Joi.string())
@@ -154,8 +153,6 @@ app.post('/api/tasks', async (req, res) => {
     
     // Auto-classify if not provided
     const classification = classifyTask(value.title, value.description);
-    
-    // ✅ FIXED: Use client-provided classification if available, otherwise use server classification
     const taskData = {
       title: value.title,
       description: value.description || null,
@@ -164,7 +161,6 @@ app.post('/api/tasks', async (req, res) => {
       status: value.status || 'pending',
       assigned_to: value.assigned_to || null,
       due_date: value.due_date || null,
-      // ✅ Use client classification if provided, otherwise use server classification
       extracted_entities: value.extracted_entities || classification.extracted_entities,
       suggested_actions: value.suggested_actions || classification.suggested_actions,
       created_at: new Date().toISOString(),
@@ -337,8 +333,6 @@ app.delete('/api/tasks/:id', async (req, res) => {
     res.status(500).json({ error: 'Failed to delete task' });
   }
 });
-
-// ✅ NEW: Endpoint to classify text without creating a task
 app.post('/api/classify', async (req, res) => {
   try {
     const { title, description } = req.body;
